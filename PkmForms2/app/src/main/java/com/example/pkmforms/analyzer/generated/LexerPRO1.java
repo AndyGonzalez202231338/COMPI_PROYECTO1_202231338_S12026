@@ -41,7 +41,7 @@ public class LexerPRO1 implements java_cup.runtime.Scanner {
   private static final int [] ZZ_CMAP_TOP = zzUnpackcmap_top();
 
   private static final String ZZ_CMAP_TOP_PACKED_0 =
-    "\1\0\37\u0100\1\u0200\267\u0100\10\u0300\u1020\u0100";
+    "\1\0\37\u0100\1\u0200\267\u0100\10\u0300\36\u0100\1\u0400\u1001\u0100";
 
   private static int [] zzUnpackcmap_top() {
     int [] result = new int[4352];
@@ -80,11 +80,11 @@ public class LexerPRO1 implements java_cup.runtime.Scanner {
     "\1\71\1\72\1\73\1\74\1\75\1\76\1\77\1\42"+
     "\1\100\1\101\1\102\1\103\1\104\1\105\1\42\1\106"+
     "\1\107\1\110\1\111\1\42\1\112\1\42\1\113\1\42"+
-    "\1\114\1\115\1\116\1\117\6\0\1\3\u01a2\0\2\3"+
-    "\326\0\u0100\3";
+    "\1\114\1\115\1\116\1\117\6\0\1\3\32\0\1\1"+
+    "\u016a\0\3\1\32\0\2\3\326\0\u0100\3\377\0\1\1";
 
   private static int [] zzUnpackcmap_blocks() {
-    int [] result = new int[1024];
+    int [] result = new int[1280];
     int offset = 0;
     offset = zzUnpackcmap_blocks(ZZ_CMAP_BLOCKS_PACKED_0, offset, result);
     return result;

@@ -1,10 +1,12 @@
 package com.example.pkmforms.ui.theme.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Divider
@@ -23,10 +25,18 @@ import com.example.pkmforms.analyzer.model.ErrorToken
 import com.example.pkmforms.analyzer.model.ErrorType
 import com.example.pkmforms.ui.theme.AppColors
 
-private val ColorLexicoHeader     = Color(0xFFE53935) // rojo - errores lexicos
-private val ColorSintacticoHeader = Color(0xFFFF9800) // naranja - errores sintacticos
+private val ColorLexicoHeader     = Color(0xFFE53935)
+private val ColorSintacticoHeader = Color(0xFFFF9800)
+private val ColorSemanticoHeader  = Color(0xFF4CAF50)
 private val ColorRowOdd           = Color(0xFF1A1A2F)
 private val ColorRowEven          = Color(0xFF12121F)
+
+private val W_LEXEMA      = 90.dp
+private val W_LINEA       = 50.dp
+private val W_COL         = 45.dp
+private val W_TIPO        = 90.dp
+private val W_DESCRIPCION = 420.dp
+private val ROW_TOTAL     = 695.dp
 
 @Composable
 fun ErrorList(
@@ -39,7 +49,6 @@ fun ErrorList(
             .heightIn(max = 220.dp)
             .background(Color(0xFF0D0D1A))
     ) {
-        // Cabecera
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -54,72 +63,35 @@ fun ErrorList(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Cerrar",
-                    tint = AppColors.Text
-                )
+            IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                Icon(imageVector = Icons.Default.Close, contentDescription = "Cerrar", tint = AppColors.Text)
             }
         }
 
-        // Cabecera de columnas
+        val scrollState = rememberScrollState()
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF252540))
+                .horizontalScroll(scrollState)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Text(
-                text = "Lexema",
-                color = AppColors.TextSecondary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.width(70.dp)
-            )
-            Text(
-                text = "Linea",
-                color = AppColors.TextSecondary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.width(45.dp)
-            )
-            Text(
-                text = "Col",
-                color = AppColors.TextSecondary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.width(40.dp)
-            )
-            Text(
-                text = "Tipo",
-                color = AppColors.TextSecondary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.width(80.dp)
-            )
-            Text(
-                text = "Descripcion",
-                color = AppColors.TextSecondary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.weight(1f)
-            )
+            Text(text = "Lexema",      color = AppColors.TextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_LEXEMA))
+            Text(text = "Linea",       color = AppColors.TextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_LINEA))
+            Text(text = "Col",         color = AppColors.TextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_COL))
+            Text(text = "Tipo",        color = AppColors.TextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_TIPO))
+            Text(text = "Descripcion", color = AppColors.TextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_DESCRIPCION))
         }
 
         Divider(color = AppColors.CodeBorder, thickness = 1.dp)
 
-        // Lista de errores
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
             items(errors.mapIndexed { i, e -> i to e }) { (index, error) ->
                 ErrorRow(
-                    error = error,
-                    background = if (index % 2 == 0) ColorRowEven else ColorRowOdd
+                    error       = error,
+                    background  = if (index % 2 == 0) ColorRowEven else ColorRowOdd,
+                    scrollState = scrollState
                 )
             }
         }
@@ -129,62 +101,33 @@ fun ErrorList(
 @Composable
 private fun ErrorRow(
     error: ErrorToken,
-    background: Color
+    background: Color,
+    scrollState: ScrollState
 ) {
     val typeColor = when (error.type) {
         ErrorType.LEXICO     -> ColorLexicoHeader
         ErrorType.SINTACTICO -> ColorSintacticoHeader
+        ErrorType.SEMANTICO  -> ColorSemanticoHeader
     }
     val typeLabel = when (error.type) {
         ErrorType.LEXICO     -> "Lexico"
         ErrorType.SINTACTICO -> "Sintactico"
+        ErrorType.SEMANTICO  -> "Semantico"
     }
 
     Row(
         modifier = Modifier
-            .fillMaxWidth()
+            .width(ROW_TOTAL)
+            .horizontalScroll(scrollState)
             .background(background)
             .padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = error.lexeme.ifBlank { "-" },
-            color = AppColors.Text,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.width(70.dp),
-            maxLines = 1
-        )
-        Text(
-            text = "${error.line}",
-            color = AppColors.Text,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.width(45.dp)
-        )
-        Text(
-            text = "${error.column}",
-            color = AppColors.Text,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.width(40.dp)
-        )
-        Text(
-            text = typeLabel,
-            color = typeColor,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.width(80.dp)
-        )
-        Text(
-            text = error.description,
-            color = AppColors.Text,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.weight(1f),
-            maxLines = 2
-        )
+        Text(text = error.lexeme.ifBlank { "-" }, color = AppColors.Text, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_LEXEMA),      maxLines = 1)
+        Text(text = "${error.line}",               color = AppColors.Text, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_LINEA))
+        Text(text = "${error.column}",             color = AppColors.Text, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_COL))
+        Text(text = typeLabel,                     color = typeColor,      fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_TIPO),        fontWeight = FontWeight.Bold)
+        Text(text = error.description,             color = AppColors.Text, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(W_DESCRIPCION))
     }
     Divider(color = Color(0xFF1E1E3A), thickness = 0.5.dp)
 }

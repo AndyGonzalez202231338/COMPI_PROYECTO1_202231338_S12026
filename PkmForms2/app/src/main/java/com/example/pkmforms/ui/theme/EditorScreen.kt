@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.pkmforms.analyzer.PkmParser
@@ -16,15 +18,29 @@ import com.example.pkmforms.ui.theme.components.TopBar
 
 @Composable
 fun EditorScreen(
-    codeText: String,
-    onCodeChange: (String) -> Unit,
-    errors: List<ErrorToken>,
-    onErrorsDismiss: () -> Unit,
-    onErrorsFound: (List<ErrorToken>) -> Unit,
-    onNavigateOptions: () -> Unit,
-    onNavigateFormView: (List<FormElement>) -> Unit
+    codeText           : String,
+    onCodeChange       : (String) -> Unit,
+    errors             : List<ErrorToken>,
+    onErrorsDismiss    : () -> Unit,
+    onErrorsFound      : (List<ErrorToken>) -> Unit,
+    onNavigateOptions  : () -> Unit,
+    onNavigateFormView : (List<FormElement>) -> Unit
 ) {
     val parser = remember { PkmParser() }
+
+    // TextFieldValue unico que vive en EditorScreen.
+    // CodeEditor lo recibe completo y lo devuelve completo,
+    // asi que el cursor siempre esta actualizado aqui.
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(text = codeText))
+    }
+
+    // Sincroniza si codeText cambia desde afuera (ej: abrir archivo)
+    LaunchedEffect(codeText) {
+        if (codeText != textFieldValue.text) {
+            textFieldValue = TextFieldValue(text = codeText)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -32,7 +48,7 @@ fun EditorScreen(
             .background(AppColors.Background)
     ) {
         TopBar(
-            title = "PKM_FORMS",
+            title       = "PKM_FORMS",
             onMenuClick = onNavigateOptions
         )
 
@@ -44,23 +60,23 @@ fun EditorScreen(
         }
 
         CodeEditor(
-            code         = codeText,
-            onCodeChange = onCodeChange,
-            modifier     = Modifier
+            value         = textFieldValue,
+            onValueChange = { newValue ->
+                // newValue ya trae texto Y posicion del cursor actualizada
+                textFieldValue = newValue
+                onCodeChange(newValue.text)
+            },
+            modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(16.dp)
         )
 
         EditorActionBar(
-            onReplace = {
-                // TODO: parse en modo replace
-            },
-            onAdd = {
-                // TODO: parse en modo add
-            },
-            onFinish = {
-                val result = parser.parse(codeText)
+            onReplace = { /* TODO */ },
+            onAdd     = { /* TODO */ },
+            onFinish  = {
+                val result = parser.parse(textFieldValue.text)
                 if (result.errors.isEmpty()) {
                     onNavigateFormView(result.elements)
                 } else {
@@ -70,6 +86,20 @@ fun EditorScreen(
                         )
                     )
                 }
+            },
+            onColorInsert = { colorString ->
+                // cursor siempre correcto porque CodeEditor
+                // devuelve el TextFieldValue completo en cada cambio
+                val cursor  = textFieldValue.selection.start
+                val before  = textFieldValue.text.substring(0, cursor)
+                val after   = textFieldValue.text.substring(cursor)
+                val newText = before + colorString + after
+                val newPos  = cursor + colorString.length
+                textFieldValue = TextFieldValue(
+                    text      = newText,
+                    selection = TextRange(newPos)
+                )
+                onCodeChange(newText)
             }
         )
 
@@ -81,12 +111,12 @@ fun EditorScreen(
 @Composable
 fun EditorScreenPreview() {
     EditorScreen(
-        codeText          = "",
-        onCodeChange      = {},
-        errors            = emptyList(),
-        onErrorsDismiss   = {},
-        onErrorsFound     = {},
-        onNavigateOptions = {},
+        codeText           = "",
+        onCodeChange       = {},
+        errors             = emptyList(),
+        onErrorsDismiss    = {},
+        onErrorsFound      = {},
+        onNavigateOptions  = {},
         onNavigateFormView = {}
     )
 }
