@@ -10,5 +10,6 @@ data class ErrorToken(
 
 enum class ErrorType {
     LEXICO,
-    SINTACTICO
+    SINTACTICO,
+    SEMANTICO
 }
