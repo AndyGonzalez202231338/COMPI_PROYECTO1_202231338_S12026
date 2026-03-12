@@ -28,7 +28,6 @@ import com.example.pkmforms.ui.theme.components.TopBar
 import com.example.pkmforms.analyzer.model.FormElement
 import com.example.pkmforms.analyzer.model.StyleData
 
-// ── Helpers de estilo ────────────────────────────────────────────────────────
 
 private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color {
     val s = raw.trim()
@@ -78,7 +77,6 @@ private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color 
     } catch (e: Exception) { fallback }
 }
 
-// Convierte HSL (h: 0-360, s: 0-1, l: 0-1) a Color de Compose
 private fun hslToColor(h: Float, s: Float, l: Float): Color {
     val androidColor = android.graphics.Color.HSVToColor(
         floatArrayOf(h, s, l)
