@@ -1,0 +1,21 @@
+###
+Author: andy fuentes
+Fecha: 11/03/2026
+Hora: 01:59
+Description: turista
+Total de Secciones: 0
+Total de Preguntas: 1
+    Abiertas: 0
+    Desplegables: 0
+    Seleccion: 0
+    Multiples: 1
+###
+
+<multiple=300,400,{"chisme", "suceso", "tecnologia"},{1, 3}>
+    <style>
+        <color=GREEN/>
+        <background color=BLACK/>
+        <font family=MONO/>
+        <text size=14>
+    </style>
+</multiple>
