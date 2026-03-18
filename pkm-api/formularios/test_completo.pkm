@@ -1,0 +1,88 @@
+###
+Author: TestUser
+Fecha: 16/03/2026
+Hora: 14:00
+Description: Formulario de prueba completo segun el PDF
+Total de Secciones: 3
+Total de Preguntas: 6
+    Abiertas: 2
+    Desplegables: 1
+    Seleccion: 1
+    Multiples: 1
+###
+
+<section=400,900,0,0,VERTICAL>
+    <style>
+        <color=#333333/>
+        <background color=#FFFFFF/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+        <border,2,LINE,color=#CCCCCC/>
+    </style>
+    <content>
+        <text=380,40,"Bienvenido al formulario de prueba 😀">
+            <style>
+                <color=#FFFFFF/>
+                <background color=#1A237E/>
+                <font family=SANS_SERIF/>
+                <text size=16>
+            </style>
+        </text>
+        <open=380,80,"Escribe tu nombre completo">
+            <style>
+                <color=#333333/>
+                <background color=#FFFFFF/>
+                <font family=SANS_SERIF/>
+                <text size=14>
+            </style>
+        </open>
+        <open=380,80,"Describe tu experiencia con la programacion 😐">
+            <style>
+                <color=#1A237E/>
+                <background color=#E3F2FD/>
+                <font family=MONO/>
+                <text size=13>
+            </style>
+        </open>
+        <drop=380,60,"Pais de origen",{"Guatemala","Mexico","Honduras","El Salvador"},-1/>
+        <select=380,140,{"Si","No","A veces"},0/>
+        <multiple=380,180,"Tecnologias que conoces",{"Kotlin","Java","Python","JavaScript","Swift"},{0,2}/>
+    </content>
+</section>
+<section=400,120,0,0,VERTICAL>
+    <style>
+        <color=#FFFFFF/>
+        <background color=#E8F5E9/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+    </style>
+    <content>
+        <text=380,50,"Seccion de colores: RGB y HSL">
+            <style>
+                <color=(255,255,255)/>
+                <background color=(56,142,60)/>
+                <font family=SANS_SERIF/>
+                <text size=14>
+            </style>
+        </text>
+        <text=380,50,"Color HSL fondo rojo ❤️">
+            <style>
+                <color=WHITE/>
+                <background color=RED/>
+                <font family=SANS_SERIF/>
+                <text size=14>
+            </style>
+        </text>
+    </content>
+</section>
+<section=400,150,0,0,HORIZONTAL>
+    <style>
+        <color=#FFFFFF/>
+        <background color=#1565C0/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+    </style>
+    <content>
+        <open=380,80,"Comentario final ❤️"/>
+    </content>
+</section>

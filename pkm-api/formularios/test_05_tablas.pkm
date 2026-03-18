@@ -1,0 +1,70 @@
+###
+Author: Luis Perez
+Fecha: 16/03/2026
+Hora: 16:42
+Description: Tablas con contenido
+Total de Secciones: 0
+Total de Preguntas: 3
+    Abiertas: 1
+    Desplegables: 1
+    Seleccion: 1
+    Multiples: 0
+###
+
+<table=400,300,0,0>
+    <style>
+        <color=BLACK/>
+        <background color=WHITE/>
+        <font family=SANS_SERIF/>
+        <text size=13>
+        <border,1,LINE,color=#BDBDBD/>
+    </style>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Columna 1 ⭐">
+                    <style>
+                        <color=WHITE/>
+                        <background color=#1565C0/>
+                        <font family=MONO/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Columna 2 ⭐">
+                    <style>
+                        <color=WHITE/>
+                        <background color=#1565C0/>
+                        <font family=MONO/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Columna 3 ⭐">
+                    <style>
+                        <color=WHITE/>
+                        <background color=#1565C0/>
+                        <font family=MONO/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <open=0,0,"Nombre del estudiante"/>
+
+            </element>
+            <element>
+                <select=0,0,{"Maniana", "Tarde", "Noche"},0/>
+
+            </element>
+            <element>
+                <drop=0,0,"Carrera",{"Ingenieria", "Medicina", "Derecho", "Arquitectura"},0/>
+
+            </element>
+        </line>
+    </content>
+</table>

@@ -1,0 +1,48 @@
+###
+Author: Pauly Waleska
+Fecha: 16/03/2026
+Hora: 17:24
+Description: pokemones multiquest
+Total de Secciones: 3
+Total de Preguntas: 2
+    Abiertas: 0
+    Desplegables: 2
+    Seleccion: 0
+    Multiples: 0
+###
+
+<section=360,150,0,0,VERTICAL>
+    <style>
+        <color=BLACK/>
+        <background color=#FFFDE7/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+    </style>
+    <content>
+        <text=0,50,"Condicion OR verdadera 😀"/>
+        <drop=340,100,"Adivina el pokemon (rango 1-10)",{},3/>
+    </content>
+</section>
+<section=360,300,0,60,VERTICAL>
+    <style>
+        <color=BLACK/>
+        <background color=#E8EAF6/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+    </style>
+    <content>
+        <text=0,50,"Condicion AND verdadera ⭐"/>
+        <drop=340,100,"Pokemon del rango 50-60",{},0/>
+    </content>
+</section>
+<section=360,120,0,80,VERTICAL>
+    <style>
+        <color=BLACK/>
+        <background color=WHITE/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+    </style>
+    <content>
+        <text=0,0,"Negacion aplicada correctamente 😺"/>
+    </content>
+</section>

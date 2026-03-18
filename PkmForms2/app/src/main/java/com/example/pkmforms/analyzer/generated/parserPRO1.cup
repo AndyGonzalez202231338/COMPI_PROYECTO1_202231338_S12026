@@ -566,7 +566,8 @@ expr_aritmetica ::= expr_aritmetica:a MAS   expr_aritmetica:b
  * precedencia que el terminal UMINUS (la mas alta entre los
  * operadores), resolviendo el conflicto con la resta binaria.
  */
-expr_unaria ::= MENOS expr_primaria %prec UMINUS
+expr_unaria ::= MENOS expr_primaria:v
+                {: RESULT = (v instanceof Number) ? -((Number)v).doubleValue() : new Object[]{"op_neg", v}; :}
               | expr_primaria:v
                 {: RESULT = v; :}
               ;
@@ -597,13 +598,13 @@ decl_variable ::= decl_number
 
 decl_number ::= NUMBER_TYPE IDENTIFICADOR:nombre
                 {: ParserPRO1.resultado.add(new Object[]{nombre, null, "number", nombreleft}); :}
-              | NUMBER_TYPE IDENTIFICADOR:nombre ASIGNACION expr_aritmetica:v
+              | NUMBER_TYPE IDENTIFICADOR:nombre ASIGNACION expresion:v
                 {: ParserPRO1.resultado.add(new Object[]{nombre, v, "number", nombreleft}); :}
               ;
 
 decl_string ::= STRING_TYPE IDENTIFICADOR:nombre
                 {: ParserPRO1.resultado.add(new Object[]{nombre, null, "string", nombreleft}); :}
-              | STRING_TYPE IDENTIFICADOR:nombre ASIGNACION expr_aritmetica:v
+              | STRING_TYPE IDENTIFICADOR:nombre ASIGNACION expresion:v
                 {:
                     // Si v es String es una cadena valida, si es Number es error de tipo
                     String tipo = (v instanceof String) ? "string" : "string_type_error";
@@ -693,7 +694,7 @@ asignacion_variable ::= IDENTIFICADOR:nombre ASIGNACION expresion:v
 llamada_draw ::= IDENTIFICADOR:nombre PUNTO DRAW PAREN_ABRE args_draw:args PAREN_CIERRA
                {:
                    ArrayList argList = (args != null) ? args : new ArrayList();
-                   ParserPRO1.resultado.add(new Object[]{"draw", nombre, argList});
+                   ParserPRO1.resultado.add(new Object[]{"draw", nombre, argList, nombreleft});
                :}
                ;
 
@@ -1087,8 +1088,8 @@ attr_pregunta_abierta ::= WIDTH  DOS_PUNTOS expresion:v
 /* ============================================================
    RESTO DE PREGUNTAS
    ============================================================ */
-pregunta_desplegable ::= DROP_QUESTION CORCH_ABRE attr_pregunta_drop_lista:node CORCH_CIERRA
-                         {: RESULT = node; :}
+pregunta_desplegable ::= DROP_QUESTION:dq CORCH_ABRE attr_pregunta_drop_lista:node CORCH_CIERRA
+                         {: node.linea = dqleft; RESULT = node; :}
                        | DROP_QUESTION CORCH_ABRE error CORCH_CIERRA
                          {: RESULT = new DropQuestionNode(); :}
                        ;
@@ -1142,8 +1143,8 @@ attr_pregunta_drop ::= WIDTH   DOS_PUNTOS expresion:v
                        {: RESULT = new Object[]{"correct", v}; :}
                      ;
 
-pregunta_seleccion ::= SELECT_QUESTION CORCH_ABRE attr_pregunta_select_lista:node CORCH_CIERRA
-                       {: RESULT = node; :}
+pregunta_seleccion ::= SELECT_QUESTION:sq CORCH_ABRE attr_pregunta_select_lista:node CORCH_CIERRA
+                       {: node.linea = sqleft; RESULT = node; :}
                      | SELECT_QUESTION CORCH_ABRE error CORCH_CIERRA
                        {: RESULT = new SelectQuestionNode(); :}
                      ;
@@ -1251,19 +1252,17 @@ bloque_codigo ::= bloque_if:n      {: RESULT = n; :}
                 | bloque_for:n     {: RESULT = n; :}
                 ;
 
-bloque_if ::= IF PAREN_ABRE expresion:cond PAREN_CIERRA
+bloque_if ::= IF:tok PAREN_ABRE expresion:cond PAREN_CIERRA
                 LLAVE_ABRE cuerpo_bloque:cuerpo LLAVE_CIERRA
                 rama_else_if_lista:elseifs
                 rama_else_opt:elseopt
               {:
                   IfNode node = new IfNode();
-                  // rama IF principal
+                  node.linea = tokleft;
                   node.ramas.add(new Object[]{cond, cuerpo});
-                  // ramas ELSE IF
                   for (Object r : elseifs) {
                       node.ramas.add((Object[]) r);
                   }
-                  // rama ELSE opcional
                   if (elseopt != null) node.ramas.add(elseopt);
                   RESULT = node;
               :}
@@ -1289,12 +1288,13 @@ rama_else_opt ::= ELSE LLAVE_ABRE cuerpo_bloque:cuerpo LLAVE_CIERRA
                   {: RESULT = null; :}
                 ;
 
-bloque_while ::= WHILE PAREN_ABRE expresion:cond PAREN_CIERRA
+bloque_while ::= WHILE:tok PAREN_ABRE expresion:cond PAREN_CIERRA
                    LLAVE_ABRE cuerpo_bloque:cuerpo LLAVE_CIERRA
                  {:
                      WhileNode node = new WhileNode();
                      node.condicion = cond;
                      node.cuerpo    = cuerpo;
+                     node.linea     = tokleft;
                      RESULT = node;
                  :}
                | WHILE PAREN_ABRE error PAREN_CIERRA
@@ -1302,12 +1302,13 @@ bloque_while ::= WHILE PAREN_ABRE expresion:cond PAREN_CIERRA
                  {: RESULT = new WhileNode(); :}
                ;
 
-bloque_do_while ::= DO LLAVE_ABRE cuerpo_bloque:cuerpo LLAVE_CIERRA
+bloque_do_while ::= DO:tok LLAVE_ABRE cuerpo_bloque:cuerpo LLAVE_CIERRA
                       WHILE PAREN_ABRE expresion:cond PAREN_CIERRA
                     {:
                         DoWhileNode node = new DoWhileNode();
                         node.condicion = cond;
                         node.cuerpo    = cuerpo;
+                        node.linea     = tokleft;
                         RESULT = node;
                     :}
                   ;
@@ -1316,7 +1317,7 @@ bloque_for ::= bloque_for_clasico:n {: RESULT = n; :}
              | bloque_for_rango:n   {: RESULT = n; :}
              ;
 
-bloque_for_clasico ::= FOR PAREN_ABRE
+bloque_for_clasico ::= FOR:tok PAREN_ABRE
                          IDENTIFICADOR:var ASIGNACION expresion:inicio PUNTO_COMA
                          expresion:cond PUNTO_COMA
                          IDENTIFICADOR:varPaso ASIGNACION expresion:paso
@@ -1331,6 +1332,7 @@ bloque_for_clasico ::= FOR PAREN_ABRE
                            node.varPaso  = varPaso;
                            node.paso     = paso;
                            node.cuerpo   = cuerpo;
+                           node.linea    = tokleft;
                            RESULT = node;
                        :}
                      | FOR PAREN_ABRE error PAREN_CIERRA
@@ -1338,7 +1340,7 @@ bloque_for_clasico ::= FOR PAREN_ABRE
                        {: RESULT = new ForNode(); :}
                      ;
 
-bloque_for_rango ::= FOR PAREN_ABRE
+bloque_for_rango ::= FOR:tok PAREN_ABRE
                        IDENTIFICADOR:var IN expresion:inicio DOTDOT expresion:fin
                      PAREN_CIERRA
                      LLAVE_ABRE cuerpo_bloque:cuerpo LLAVE_CIERRA
@@ -1349,6 +1351,7 @@ bloque_for_rango ::= FOR PAREN_ABRE
                          node.inicio   = inicio;
                          node.fin      = fin;
                          node.cuerpo   = cuerpo;
+                         node.linea    = tokleft;
                          RESULT = node;
                      :}
                    ;

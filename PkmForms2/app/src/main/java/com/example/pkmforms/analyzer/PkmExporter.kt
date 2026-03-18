@@ -44,7 +44,7 @@ object PkmExporter {
     }
 
 
-    // EXPORTACION RECURSIVA DE ELEMENTOS
+    // Exportacion de cada elemento
     private fun exportarElemento(elemento: FormElement, nivel: Int): String {
         val ind = "    ".repeat(nivel)
         return when (elemento) {
@@ -202,14 +202,15 @@ object PkmExporter {
         val ind     = "    ".repeat(nivel)
         val w       = q.width  ?: 0
         val h       = q.height ?: 0
+        val label   = escaparTexto(q.label.ifBlank { "" })
         val options = q.options.joinToString(", ") { "\"${escaparTexto(it)}\"" }
         val correct = q.correct.joinToString(", ")
 
         return if (q.style.estaVacio()) {
-            "${ind}<multiple=$w,$h,{$options},{$correct}/>\n"
+            "${ind}<multiple=$w,$h,\"$label\",{$options},{$correct}/>\n"
         } else {
             val sb = StringBuilder()
-            sb.appendLine("${ind}<multiple=$w,$h,{$options},{$correct}>")
+            sb.appendLine("${ind}<multiple=$w,$h,\"$label\",{$options},{$correct}>")
             sb.append(exportarEstilo(q.style, nivel + 1))
             sb.append("${ind}</multiple>")
             sb.toString()

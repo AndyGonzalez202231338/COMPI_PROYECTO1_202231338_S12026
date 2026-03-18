@@ -6,6 +6,7 @@ public class SelectQuestionNode {
     public Object    width      = null;
     public Object    height     = null;
     public ArrayList options    = new ArrayList();
-    public Object    correctVal = null;  // Double o String (identificador)
+    public Object    correctVal = null;
     public StyleNode style      = null;
+    public int       linea      = 0;
 }

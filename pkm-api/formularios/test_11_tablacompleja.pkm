@@ -1,0 +1,52 @@
+###
+Author: andy González
+Fecha: 16/03/2026
+Hora: 16:51
+Description: tabla con preguntas en secciones
+Total de Secciones: 0
+Total de Preguntas: 6
+    Abiertas: 2
+    Desplegables: 2
+    Seleccion: 1
+    Multiples: 1
+###
+
+<table=450,500,0,0>
+    <style>
+        <color=#212121/>
+        <background color=#FAFAFA/>
+        <font family=SANS_SERIF/>
+        <text size=13>
+        <border,1,LINE,color=#BDBDBD/>
+    </style>
+    <content>
+        <line>
+            <element>
+                <open=120,80,"Nombre 😀"/>
+
+            </element>
+            <element>
+                <drop=120,80,"Turno",{"Maniana", "Tarde", "Noche"},0/>
+
+            </element>
+            <element>
+                <select=120,80,{"Si", "No"},0/>
+
+            </element>
+        </line>
+        <line>
+            <element>
+                <open=120,80,"Apellido"/>
+
+            </element>
+            <element>
+                <drop=120,80,"Seccion",{"A", "B", "C", "D"},-1/>
+
+            </element>
+            <element>
+                <multiple=125,80,"",{"Espanol", "Ingles", "Frances"},{0, 1}/>
+
+            </element>
+        </line>
+    </content>
+</table>

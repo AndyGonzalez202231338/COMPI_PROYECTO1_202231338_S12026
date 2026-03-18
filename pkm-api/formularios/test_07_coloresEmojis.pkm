@@ -1,0 +1,79 @@
+###
+Author: Emmanuel Cardona
+Fecha: 16/03/2026
+Hora: 16:44
+Description: uso de emojis y uso de colores con formatos
+Total de Secciones: 1
+Total de Preguntas: 2
+    Abiertas: 1
+    Desplegables: 0
+    Seleccion: 1
+    Multiples: 0
+###
+
+<section=400,1000,0,0,VERTICAL>
+    <style>
+        <color=BLACK/>
+        <background color=WHITE/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+    </style>
+    <content>
+        <text=0,0,"Color HEX: fondo azul oscuro">
+            <style>
+                <color=#FFFFFF/>
+                <background color=#1A237E/>
+                <font family=SANS_SERIF/>
+                <text size=14>
+            </style>
+        </text>        <text=0,0,"Color RGB: fondo verde">
+            <style>
+                <color=(255,255,255)/>
+                <background color=(56,142,60)/>
+                <font family=SANS_SERIF/>
+                <text size=14>
+            </style>
+        </text>        <text=0,0,"Color HSL: fondo rojo">
+            <style>
+                <color=<0,0,100>/>
+                <background color=<0,70,50>/>
+                <font family=SANS_SERIF/>
+                <text size=14>
+            </style>
+        </text>        <text=0,0,"Colores predefinidos RED sobre WHITE">
+            <style>
+                <color=RED/>
+                <background color=WHITE/>
+                <font family=SANS_SERIF/>
+                <text size=14>
+            </style>
+        </text>        <text=0,0,"Emojis: 😀 🥲 😐 ❤️ ⭐ ⭐⭐⭐ 😺 😀 🥲 😐 ❤️ 😺">
+            <style>
+                <color=BLACK/>
+                <background color=WHITE/>
+                <font family=SANS_SERIF/>
+                <text size=16>
+            </style>
+        </text>        <text=0,0,"⭐⭐❤️ Hola mundo 😀❤️">
+            <style>
+                <color=BLACK/>
+                <background color=YELLOW/>
+                <font family=MONO/>
+                <text size=14>
+            </style>
+        </text>        <open=0,100,"Describe el color que mas te gusta 😀]">
+            <style>
+                <color=PURPLE/>
+                <background color=WHITE/>
+                <font family=CURSIVE/>
+                <text size=14>
+            </style>
+        </open>        <select=0,200,{"Rojo ❤️", "Verde 😺", "Azul ⭐"},2>
+            <style>
+                <color=BLACK/>
+                <background color=SKY/>
+                <font family=SANS_SERIF/>
+                <text size=13>
+            </style>
+        </select>    </content>
+</section>
