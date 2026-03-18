@@ -105,14 +105,16 @@ private fun ErrorRow(
     scrollState: ScrollState
 ) {
     val typeColor = when (error.type) {
-        ErrorType.LEXICO     -> ColorLexicoHeader
-        ErrorType.SINTACTICO -> ColorSintacticoHeader
-        ErrorType.SEMANTICO  -> ColorSemanticoHeader
+        ErrorType.LEXICO       -> ColorLexicoHeader
+        ErrorType.SINTACTICO   -> ColorSintacticoHeader
+        ErrorType.SEMANTICO    -> ColorSemanticoHeader
+        ErrorType.ADVERTENCIA  -> Color(0xFFFFEB3B)
     }
     val typeLabel = when (error.type) {
-        ErrorType.LEXICO     -> "Lexico"
-        ErrorType.SINTACTICO -> "Sintactico"
-        ErrorType.SEMANTICO  -> "Semantico"
+        ErrorType.LEXICO       -> "Lexico"
+        ErrorType.SINTACTICO   -> "Sintactico"
+        ErrorType.SEMANTICO    -> "Semantico"
+        ErrorType.ADVERTENCIA  -> "Advertencia"
     }
 
     Row(

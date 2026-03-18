@@ -60,16 +60,29 @@ class SyntaxHighlightTransformation : VisualTransformation {
                 continue
             }
 
-            // String literal: "..."
+            // String literal: "..." — naranja, pero @[...] dentro van en amarillo
             if (code[i] == '"') {
-                val end = code.indexOf('"', i + 1)
-                    .let { if (it == -1) code.length else it + 1 }
-                addStyle(SpanStyle(color = ColorString), i, end)
-                i = end
+                val endQuote = code.indexOf('"', i + 1)
+                    .let { if (it == -1) code.length - 1 else it }
+                // Colorear todo el string de naranja primero
+                addStyle(SpanStyle(color = ColorString), i, endQuote + 1)
+                // Luego sobreescribir los @[...] de amarillo dentro del string
+                var j = i + 1
+                while (j < endQuote) {
+                    if (code[j] == '@' && j + 1 < endQuote && code[j + 1] == '[') {
+                        val endEmoji = code.indexOf(']', j + 2)
+                            .let { if (it == -1 || it > endQuote) endQuote else it + 1 }
+                        addStyle(SpanStyle(color = ColorEmoji), j, endEmoji)
+                        j = endEmoji
+                    } else {
+                        j++
+                    }
+                }
+                i = endQuote + 1
                 continue
             }
 
-            // Especificacion de emojis: @[...]
+            // Especificacion de emojis fuera de strings: @[...]
             if (code[i] == '@' && i + 1 < code.length && code[i + 1] == '[') {
                 val end = code.indexOf(']', i + 2)
                     .let { if (it == -1) code.length else it + 1 }

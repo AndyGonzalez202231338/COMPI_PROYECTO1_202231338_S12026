@@ -38,6 +38,7 @@ sealed class FormElement {
     data class MultipleQuestion(
         val options: List<String> = emptyList(),
         val correct: List<Int>   = emptyList(),
+        val label:   String      = "",
         val width:   Int?        = null,
         val height:  Int?        = null,
         val style:   StyleData   = StyleData()

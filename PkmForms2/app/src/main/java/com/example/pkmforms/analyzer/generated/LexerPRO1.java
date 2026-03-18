@@ -638,6 +638,87 @@ public class LexerPRO1 implements java_cup.runtime.Scanner {
         });
     }
 
+    /*
+     * Convierte las notaciones de emoji @[...] dentro de una cadena
+     * a sus caracteres Unicode correspondientes.
+     * Se llama despues de extraer el contenido de la cadena (sin comillas).
+     */
+    private String resolverEmojis(String texto) {
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        while (i < texto.length()) {
+            // Buscar inicio de notacion emoji @[
+            if (i + 1 < texto.length() && texto.charAt(i) == '@' && texto.charAt(i+1) == '[') {
+                int fin = texto.indexOf(']', i + 2);
+                if (fin == -1) {
+                    // No hay cierre, agregar tal cual
+                    sb.append(texto.charAt(i));
+                    i++;
+                    continue;
+                }
+                String contenido = texto.substring(i + 2, fin); // lo de adentro de @[...]
+                String emoji = convertirEmoji(contenido);
+                if (emoji != null) {
+                    sb.append(emoji);
+                } else {
+                    // No reconocido, dejar tal cual
+                    sb.append(texto, i, fin + 1);
+                }
+                i = fin + 1;
+            } else {
+                sb.append(texto.charAt(i));
+                i++;
+            }
+        }
+        return sb.toString();
+    }
+
+    /*
+     * Convierte el contenido entre @[ y ] al emoji Unicode.
+     * Retorna null si no reconoce el patron.
+     */
+    private String convertirEmoji(String contenido) {
+        // Nombres directos
+        if (contenido.equals(":smile:"))   return "\uD83D\uDE00"; // 😀
+        if (contenido.equals(":sad:"))     return "\uD83E\uDD72"; // 🥲
+        if (contenido.equals(":serious:")) return "\uD83D\uDE10"; // 😐
+        if (contenido.equals(":heart:"))   return "\u2764\uFE0F"; // ❤️
+        if (contenido.equals(":star:"))    return "\u2B50";        // ⭐
+        if (contenido.equals(":cat:") || contenido.equals(":^^:")) return "\uD83D\uDE3A"; // 😺
+
+        // :) :)) :))))) — dos puntos + uno o mas parentesis abre
+        if (contenido.matches(":\\)+"))    return "\uD83D\uDE00"; // 😀
+        // :( :(( — dos puntos + uno o mas parentesis cierra
+        if (contenido.matches(":\\(+"))    return "\uD83E\uDD72"; // 🥲
+        // :| :|| — dos puntos + uno o mas pipes
+        if (contenido.matches(":\\|+"))    return "\uD83D\uDE10"; // 😐
+
+        // Corazon: <3, <<3, <<<33, <<<<33333 — uno o mas < seguido de uno o mas 3
+        if (contenido.matches("<+3+"))          return "\u2764\uFE0F"; // ❤️
+        // Formato largo: :<<<<33333: — : + uno o mas < + uno o mas 3 + : opcional
+        if (contenido.matches(":<+3+:?"))       return "\u2764\uFE0F"; // ❤️
+
+        // :star:N: o :star-N: — N estrellas
+        java.util.regex.Matcher mColon = java.util.regex.Pattern
+            .compile(":star:(\\d+):?").matcher(contenido);
+        if (mColon.matches()) {
+            int n = Math.min(Integer.parseInt(mColon.group(1)), 50);
+            StringBuilder stars = new StringBuilder();
+            for (int k = 0; k < n; k++) stars.append("\u2B50");
+            return stars.toString();
+        }
+        java.util.regex.Matcher mGuion = java.util.regex.Pattern
+            .compile(":star-(\\d+):?").matcher(contenido);
+        if (mGuion.matches()) {
+            int n = Math.min(Integer.parseInt(mGuion.group(1)), 50);
+            StringBuilder stars = new StringBuilder();
+            for (int k = 0; k < n; k++) stars.append("\u2B50");
+            return stars.toString();
+        }
+
+        return null; // no reconocido
+    }
+
 
   /**
    * Creates a new scanner
@@ -1202,6 +1283,8 @@ public class LexerPRO1 implements java_cup.runtime.Scanner {
           case 28:
             { String raw   = yytext();
                                 String valor = raw.substring(1, raw.length() - 1);
+                                // Convertir notaciones @[...] a emojis Unicode
+                                valor = resolverEmojis(valor);
                                 return symbol(sym.CADENA, valor);
             }
           // fall through

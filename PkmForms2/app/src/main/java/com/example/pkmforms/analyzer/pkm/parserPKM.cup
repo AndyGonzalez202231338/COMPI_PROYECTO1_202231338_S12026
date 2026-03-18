@@ -1,0 +1,421 @@
+/*
+ * PKM_FORMS - Analizador Sintactico para archivos .pkm
+ * Lenguaje de guardado - case insensitive
+ */
+package com.example.pkmforms.analyzer.pkm;
+import java_cup.runtime.*;
+import java.util.ArrayList;
+import com.example.pkmforms.analyzer.pkm.PkmStyleNode;
+import com.example.pkmforms.analyzer.pkm.PkmSectionNode;
+import com.example.pkmforms.analyzer.pkm.PkmTableNode;
+import com.example.pkmforms.analyzer.pkm.PkmOpenNode;
+import com.example.pkmforms.analyzer.pkm.PkmDropNode;
+import com.example.pkmforms.analyzer.pkm.PkmSelectNode;
+import com.example.pkmforms.analyzer.pkm.PkmMultipleNode;
+import com.example.pkmforms.analyzer.pkm.PkmTextNode;
+
+parser code {:
+    public static ArrayList<Object> resultado = new ArrayList<>();
+
+    @Override
+    public void syntax_error(Symbol token) { /* ignorar errores, archivo puede estar manipulado */ }
+
+    @Override
+    public void unrecovered_syntax_error(Symbol token) throws Exception { /* ignorar */ }
+:};
+
+/* ===== TERMINALES ===== */
+terminal TAG_SECTION_OPEN, TAG_SECTION_CLOSE;
+terminal TAG_TABLE_OPEN,   TAG_TABLE_CLOSE;
+terminal TAG_OPEN_OPEN,    TAG_OPEN_CLOSE;
+terminal TAG_DROP_OPEN,    TAG_DROP_CLOSE;
+terminal TAG_SELECT_OPEN,  TAG_SELECT_CLOSE;
+terminal TAG_MULTIPLE_OPEN,TAG_MULTIPLE_CLOSE;
+terminal TAG_TEXT_OPEN,    TAG_TEXT_CLOSE;
+terminal TAG_STYLE_OPEN,   TAG_STYLE_CLOSE;
+terminal TAG_CONTENT_OPEN, TAG_CONTENT_CLOSE;
+terminal TAG_LINE_OPEN,    TAG_LINE_CLOSE;
+terminal TAG_ELEMENT_OPEN, TAG_ELEMENT_CLOSE;
+
+terminal STYLE_COLOR, STYLE_BG, STYLE_FONT, STYLE_SIZE, STYLE_BORDER;
+terminal String FONT_VAL;
+terminal String BORDER_TYPE;
+terminal String ORIENTATION;
+terminal String COLOR;
+terminal Double NUMERO;
+terminal String CADENA;
+terminal COMA, SLASH, SLASH_GT, GT, GUION;
+terminal LLAVE_ABRE, LLAVE_CIERRA;
+
+/* ===== NO TERMINALES ===== */
+non terminal programa;
+non terminal ArrayList elementos;
+non terminal Object  elemento;
+non terminal PkmSectionNode  seccion;
+non terminal PkmTableNode    tabla;
+non terminal ArrayList       tabla_filas;
+non terminal ArrayList       tabla_celdas;
+non terminal PkmOpenNode     pregunta_abierta;
+non terminal PkmDropNode     pregunta_drop;
+non terminal PkmSelectNode   pregunta_select;
+non terminal PkmMultipleNode pregunta_multiple;
+non terminal PkmTextNode     texto_elem;
+non terminal PkmStyleNode    estilo;
+non terminal PkmStyleNode    estilo_lista;
+non terminal ArrayList       lista_opciones;
+non terminal ArrayList       lista_correctos;
+non terminal Double           numero_negativo;
+
+/* ===== GRAMATICA ===== */
+start with programa;
+
+programa ::= elementos:lista
+             {: ParserPKM.resultado.addAll(lista); :}
+           | /* vacio */
+           ;
+
+
+/* ---- ELEMENTOS ---- */
+elementos ::= elementos:lista elemento:e
+              {:
+                  if (e != null) lista.add(e);
+                  RESULT = lista;
+              :}
+            | elemento:e
+              {:
+                  ArrayList l = new ArrayList();
+                  if (e != null) l.add(e);
+                  RESULT = l;
+              :}
+            ;
+
+elemento ::= seccion:n           {: RESULT = n; :}
+           | tabla:n             {: RESULT = n; :}
+           | pregunta_abierta:n  {: RESULT = n; :}
+           | pregunta_drop:n     {: RESULT = n; :}
+           | pregunta_select:n   {: RESULT = n; :}
+           | pregunta_multiple:n {: RESULT = n; :}
+           | texto_elem:n        {: RESULT = n; :}
+           ;
+
+/* ---- SECCION ---- */
+seccion ::= TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py COMA ORIENTATION:ori GT
+              TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+              TAG_CONTENT_OPEN elementos:hijos TAG_CONTENT_CLOSE
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.orientation=ori; n.style=s; n.elementos=hijos;
+                RESULT = n;
+            :}
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py COMA ORIENTATION:ori GT
+              TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.orientation=ori; n.style=s;
+                RESULT = n;
+            :}
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py COMA ORIENTATION:ori GT
+              TAG_CONTENT_OPEN elementos:hijos TAG_CONTENT_CLOSE
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.orientation=ori; n.elementos=hijos;
+                RESULT = n;
+            :}
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py COMA ORIENTATION:ori GT
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.orientation=ori;
+                RESULT = n;
+            :}
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+              TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+              TAG_CONTENT_OPEN elementos:hijos TAG_CONTENT_CLOSE
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.style=s; n.elementos=hijos;
+                RESULT = n;
+            :}
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+              TAG_CONTENT_OPEN elementos:hijos TAG_CONTENT_CLOSE
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.elementos=hijos;
+                RESULT = n;
+            :}
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                RESULT = n;
+            :}
+          ;
+
+/* ---- TABLA ---- */
+/* Formato igual a section: <table=width,height,pointX,pointY> */
+tabla ::= TAG_TABLE_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+            TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+            TAG_CONTENT_OPEN tabla_filas:filas TAG_CONTENT_CLOSE
+          TAG_TABLE_CLOSE
+          {:
+              PkmTableNode n = new PkmTableNode();
+              n.width=w.intValue(); n.height=h.intValue();
+              n.pointX=px.intValue(); n.pointY=py.intValue();
+              n.style=s; n.filas=filas;
+              RESULT = n;
+          :}
+        | TAG_TABLE_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+            TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+          TAG_TABLE_CLOSE
+          {:
+              PkmTableNode n = new PkmTableNode();
+              n.width=w.intValue(); n.height=h.intValue();
+              n.pointX=px.intValue(); n.pointY=py.intValue();
+              n.style=s;
+              RESULT = n;
+          :}
+        | TAG_TABLE_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+            TAG_CONTENT_OPEN tabla_filas:filas TAG_CONTENT_CLOSE
+          TAG_TABLE_CLOSE
+          {:
+              PkmTableNode n = new PkmTableNode();
+              n.width=w.intValue(); n.height=h.intValue();
+              n.pointX=px.intValue(); n.pointY=py.intValue();
+              n.filas=filas;
+              RESULT = n;
+          :}
+        | TAG_TABLE_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+          TAG_TABLE_CLOSE
+          {:
+              PkmTableNode n = new PkmTableNode();
+              n.width=w.intValue(); n.height=h.intValue();
+              n.pointX=px.intValue(); n.pointY=py.intValue();
+              RESULT = n;
+          :}
+        ;
+
+tabla_filas ::= tabla_filas:lista TAG_LINE_OPEN tabla_celdas:fila TAG_LINE_CLOSE
+                {: lista.add(fila); RESULT = lista; :}
+              | TAG_LINE_OPEN tabla_celdas:fila TAG_LINE_CLOSE
+                {: ArrayList l = new ArrayList(); l.add(fila); RESULT = l; :}
+              ;
+
+tabla_celdas ::= tabla_celdas:lista TAG_ELEMENT_OPEN elemento:e TAG_ELEMENT_CLOSE
+                 {: lista.add(e); RESULT = lista; :}
+               | tabla_celdas:lista TAG_ELEMENT_OPEN TAG_ELEMENT_CLOSE
+                 {: lista.add(null); RESULT = lista; :}
+               | TAG_ELEMENT_OPEN elemento:e TAG_ELEMENT_CLOSE
+                 {: ArrayList l = new ArrayList(); l.add(e); RESULT = l; :}
+               | TAG_ELEMENT_OPEN TAG_ELEMENT_CLOSE
+                 {: ArrayList l = new ArrayList(); l.add(null); RESULT = l; :}
+               ;
+
+/* ---- PREGUNTA ABIERTA ---- */
+pregunta_abierta ::= TAG_OPEN_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl SLASH_GT
+                     {:
+                         PkmOpenNode n = new PkmOpenNode();
+                         n.width=w.intValue(); n.height=h.intValue(); n.label=lbl;
+                         RESULT = n;
+                     :}
+                   | TAG_OPEN_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl GT
+                       estilo:s
+                     TAG_OPEN_CLOSE
+                     {:
+                         PkmOpenNode n = new PkmOpenNode();
+                         n.width=w.intValue(); n.height=h.intValue();
+                         n.label=lbl; n.style=s;
+                         RESULT = n;
+                     :}
+                   | TAG_OPEN_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl GT
+                     TAG_OPEN_CLOSE
+                     {:
+                         PkmOpenNode n = new PkmOpenNode();
+                         n.width=w.intValue(); n.height=h.intValue(); n.label=lbl;
+                         RESULT = n;
+                     :}
+                   ;
+
+/* ---- PREGUNTA DESPLEGABLE ---- */
+pregunta_drop ::= TAG_DROP_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                    LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c SLASH_GT
+                  {:
+                      PkmDropNode n = new PkmDropNode();
+                      n.width=w.intValue(); n.height=h.intValue();
+                      n.label=lbl; n.opciones=ops; n.correct=c.intValue();
+                      RESULT = n;
+                  :}
+                | TAG_DROP_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                    LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c GT
+                    estilo:s
+                  TAG_DROP_CLOSE
+                  {:
+                      PkmDropNode n = new PkmDropNode();
+                      n.width=w.intValue(); n.height=h.intValue();
+                      n.label=lbl; n.opciones=ops; n.correct=c.intValue(); n.style=s;
+                      RESULT = n;
+                  :}
+                | TAG_DROP_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                    LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c GT
+                  TAG_DROP_CLOSE
+                  {:
+                      PkmDropNode n = new PkmDropNode();
+                      n.width=w.intValue(); n.height=h.intValue();
+                      n.label=lbl; n.opciones=ops; n.correct=c.intValue();
+                      RESULT = n;
+                  :}
+                ;
+
+/* ---- PREGUNTA SELECCION ---- */
+pregunta_select ::= TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA
+                      LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c SLASH_GT
+                    {:
+                        PkmSelectNode n = new PkmSelectNode();
+                        n.width=w.intValue(); n.height=h.intValue();
+                        n.opciones=ops; n.correct=c.intValue();
+                        RESULT = n;
+                    :}
+                  | TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA
+                      LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c GT
+                      estilo:s
+                    TAG_SELECT_CLOSE
+                    {:
+                        PkmSelectNode n = new PkmSelectNode();
+                        n.width=w.intValue(); n.height=h.intValue();
+                        n.opciones=ops; n.correct=c.intValue(); n.style=s;
+                        RESULT = n;
+                    :}
+                  | TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA
+                      LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c GT
+                    TAG_SELECT_CLOSE
+                    {:
+                        PkmSelectNode n = new PkmSelectNode();
+                        n.width=w.intValue(); n.height=h.intValue();
+                        n.opciones=ops; n.correct=c.intValue();
+                        RESULT = n;
+                    :}
+                  ;
+
+/* ---- PREGUNTA MULTIPLE ---- */
+pregunta_multiple ::= TAG_MULTIPLE_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                        LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA
+                        LLAVE_ABRE lista_correctos:cs LLAVE_CIERRA SLASH_GT
+                      {:
+                          PkmMultipleNode n = new PkmMultipleNode();
+                          n.width=w.intValue(); n.height=h.intValue();
+                          n.label=lbl; n.opciones=ops; n.correctos=cs;
+                          RESULT = n;
+                      :}
+                    | TAG_MULTIPLE_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                        LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA
+                        LLAVE_ABRE lista_correctos:cs LLAVE_CIERRA GT
+                        estilo:s
+                      TAG_MULTIPLE_CLOSE
+                      {:
+                          PkmMultipleNode n = new PkmMultipleNode();
+                          n.width=w.intValue(); n.height=h.intValue();
+                          n.label=lbl; n.opciones=ops; n.correctos=cs; n.style=s;
+                          RESULT = n;
+                      :}
+                    | TAG_MULTIPLE_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                        LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA
+                        LLAVE_ABRE lista_correctos:cs LLAVE_CIERRA GT
+                      TAG_MULTIPLE_CLOSE
+                      {:
+                          PkmMultipleNode n = new PkmMultipleNode();
+                          n.width=w.intValue(); n.height=h.intValue();
+                          n.label=lbl; n.opciones=ops; n.correctos=cs;
+                          RESULT = n;
+                      :}
+                    ;
+
+/* ---- TEXTO ---- */
+texto_elem ::= TAG_TEXT_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:c SLASH_GT
+               {:
+                   PkmTextNode n = new PkmTextNode();
+                   n.width=w.intValue(); n.height=h.intValue(); n.content=c;
+                   RESULT = n;
+               :}
+             | TAG_TEXT_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:c GT
+                 estilo:s
+               TAG_TEXT_CLOSE
+               {:
+                   PkmTextNode n = new PkmTextNode();
+                   n.width=w.intValue(); n.height=h.intValue();
+                   n.content=c; n.style=s;
+                   RESULT = n;
+               :}
+             | TAG_TEXT_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:c GT
+               TAG_TEXT_CLOSE
+               {:
+                   PkmTextNode n = new PkmTextNode();
+                   n.width=w.intValue(); n.height=h.intValue(); n.content=c;
+                   RESULT = n;
+               :}
+             ;
+
+/* ---- ESTILO ---- */
+estilo ::= TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+           {: RESULT = s; :}
+         ;
+
+estilo_lista ::= estilo_lista:s STYLE_COLOR COLOR:v SLASH_GT
+                 {: s.color = v; RESULT = s; :}
+               | estilo_lista:s STYLE_COLOR COLOR:v GT
+                 {: s.color = v; RESULT = s; :}
+               | estilo_lista:s STYLE_BG COLOR:v SLASH_GT
+                 {: s.backgroundColor = v; RESULT = s; :}
+               | estilo_lista:s STYLE_BG COLOR:v GT
+                 {: s.backgroundColor = v; RESULT = s; :}
+               | estilo_lista:s STYLE_FONT FONT_VAL:v SLASH_GT
+                 {: s.fontFamily = v; RESULT = s; :}
+               | estilo_lista:s STYLE_FONT FONT_VAL:v GT
+                 {: s.fontFamily = v; RESULT = s; :}
+               | estilo_lista:s STYLE_SIZE NUMERO:v GT
+                 {: s.textSize = v.floatValue(); RESULT = s; :}
+               | estilo_lista:s STYLE_BORDER NUMERO:n COMA BORDER_TYPE:t COMA COLOR:c SLASH_GT
+                 {: s.borderSize = n.floatValue(); s.borderType = t; s.borderColor = c; RESULT = s; :}
+               | estilo_lista:s STYLE_BORDER NUMERO:n COMA BORDER_TYPE:t COMA COLOR:c GT
+                 {: s.borderSize = n.floatValue(); s.borderType = t; s.borderColor = c; RESULT = s; :}
+               | /* vacio */
+                 {: RESULT = new PkmStyleNode(); :}
+               ;
+
+/* ---- LISTAS ---- */
+lista_opciones ::= lista_opciones:l COMA CADENA:v
+                   {: l.add(v); RESULT = l; :}
+                 | CADENA:v
+                   {: ArrayList l = new ArrayList(); l.add(v); RESULT = l; :}
+                 | /* vacio */
+                   {: RESULT = new ArrayList(); :}
+                 ;
+
+lista_correctos ::= lista_correctos:l COMA numero_negativo:v
+                    {: l.add(v.intValue()); RESULT = l; :}
+                  | numero_negativo:v
+                    {: ArrayList l = new ArrayList(); l.add(v.intValue()); RESULT = l; :}
+                  | /* vacio */
+                    {: RESULT = new ArrayList(); :}
+                  ;
+
+numero_negativo ::= GUION NUMERO:v  {: RESULT = -v; :}
+                  | NUMERO:v        {: RESULT = v;  :}
+                  ;

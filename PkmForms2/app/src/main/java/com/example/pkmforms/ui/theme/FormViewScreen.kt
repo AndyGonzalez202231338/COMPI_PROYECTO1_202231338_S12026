@@ -24,11 +24,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.clip
 import com.example.pkmforms.ui.theme.components.TopBar
 import com.example.pkmforms.analyzer.model.FormElement
 import com.example.pkmforms.analyzer.model.StyleData
 
-
+// ====== Helpers de estilo ======
 private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color {
     val s = raw.trim()
     if (s.isEmpty()) return fallback
@@ -49,7 +50,7 @@ private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color 
                 )
             }
 
-            // HSL: <h,s,l> — formato del lexer con angulos
+            // HSL: <h,s,l>
             su.startsWith("<") && su.endsWith(">") -> {
                 val nums = su.removePrefix("<").removeSuffix(">").split(",")
                 val h = nums[0].trim().toFloat()          // 0-360
@@ -58,7 +59,7 @@ private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color 
                 hslToColor(h, sl, l)
             }
 
-            // Colores predefinidos por nombre
+            // Colores predefinidos por nombre para textos ingresados
             else -> when (su) {
                 "RED"    -> Color(0xFFE53935)
                 "BLUE"   -> Color(0xFF1565C0)
@@ -77,11 +78,12 @@ private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color 
     } catch (e: Exception) { fallback }
 }
 
+// Convierte HSL (h: 0-360, s: 0-1, l: 0-1) a Color de Compose
 private fun hslToColor(h: Float, s: Float, l: Float): Color {
     val androidColor = android.graphics.Color.HSVToColor(
         floatArrayOf(h, s, l)
     )
-
+    // Android usa HSV no HSL, convertir L a V correctamente
     val v = l + s * minOf(l, 1f - l)
     val sv = if (v == 0f) 0f else 2f * (1f - l / v)
     val hsv = floatArrayOf(h, sv, v)
@@ -120,15 +122,17 @@ private fun Modifier.applyStyle(style: StyleData): Modifier {
     return m
 }
 
-/* =========    PANTALA PRINCIPAL ========== */
+// ===== Pantalla principal =====
 
 @Composable
 fun FormViewScreen(
     elements: List<FormElement> = emptyList(),
     onBackToEditor: () -> Unit,
-    onNavigateOptions: () -> Unit
+    onNavigateOptions: () -> Unit,
+    onSent: () -> Unit = {},
+    modoContestacion: Boolean = false
 ) {
-    var correctAnswerMessage by remember { mutableStateOf<String?>(null) }
+    var mostrarDialogoEnvio by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -139,10 +143,6 @@ fun FormViewScreen(
             title = "PKM_FORMS",
             onMenuClick = onNavigateOptions
         )
-
-        correctAnswerMessage?.let { msg ->
-            CorrectAnswerBanner(message = msg, onDismiss = { correctAnswerMessage = null })
-        }
 
         val hScroll = rememberScrollState()
         Column(
@@ -175,14 +175,148 @@ fun FormViewScreen(
         }
 
         FormViewActionBar(
-            onBackToEditor = onBackToEditor,
-            onSend = { /* TODO: validacion de respuestas */ }
+            onBackToEditor    = onBackToEditor,
+            onSend            = { mostrarDialogoEnvio = true },
+            modoContestacion  = modoContestacion
+        )
+    }
+
+    // Dialog de envio
+    if (mostrarDialogoEnvio) {
+        val respuestasCorrectas = construirMensajeRespuestas(elements)
+        SendDialog(
+            respuestasCorrectas = respuestasCorrectas,
+            onDismiss           = {
+                mostrarDialogoEnvio = false
+                onSent()
+            }
         )
     }
 }
 
-// inheritedWidth / inheritedHeight: dimensiones del padre para aplicar herencia
-// cuando el hijo no define las suyas propias
+// ===== Construir mensaje de respuestas correctas =====
+/* Recorre todos los elementos recursivamente y recolecta las respuestas correctas
+ de DROP, SELECT y MULTIPLE que tengan correct definido */
+
+private fun construirMensajeRespuestas(elementos: List<FormElement>): List<String> {
+    val resultado = mutableListOf<String>()
+    var contador  = 1
+
+    fun recorrer(lista: List<FormElement>) {
+        for (el in lista) {
+            when (el) {
+                is FormElement.DropQuestion -> {
+                    if (el.correct >= 0 && el.correct < el.options.size) {
+                        val correcta = el.options[el.correct]
+                        resultado.add("Pregunta $contador (${el.label.ifBlank { "Desplegable" }}): $correcta")
+                    }
+                    contador++
+                }
+                is FormElement.SelectQuestion -> {
+                    if (el.correct >= 0 && el.correct < el.options.size) {
+                        val correcta = el.options[el.correct]
+                        resultado.add("Pregunta $contador: $correcta")
+                    }
+                    contador++
+                }
+                is FormElement.MultipleQuestion -> {
+                    if (el.correct.isNotEmpty()) {
+                        val correctas = el.correct
+                            .filter { it >= 0 && it < el.options.size }
+                            .joinToString(", ") { el.options[it] }
+                        if (correctas.isNotBlank()) {
+                            resultado.add("Pregunta $contador: $correctas")
+                        }
+                    }
+                    contador++
+                }
+                is FormElement.OpenQuestion -> contador++
+                is FormElement.Section      -> recorrer(el.elements)
+                is FormElement.Table        -> el.rows.forEach { fila -> fila.filterNotNull().let { recorrer(it) } }
+                is FormElement.TextElement  -> { /* sin respuesta */ }
+            }
+        }
+    }
+
+    recorrer(elementos)
+    return resultado
+}
+
+// ===== Dialog de envio =====
+
+@Composable
+private fun SendDialog(
+    respuestasCorrectas: List<String>,
+    onDismiss: () -> Unit
+) {
+    val hayRespuestas = respuestasCorrectas.isNotEmpty()
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(AppColors.Surface)
+                .padding(24.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Titulo
+            Text(
+                text       = if (hayRespuestas) "Respuestas correctas" else "Formulario enviado",
+                color      = AppColors.Text,
+                fontSize   = 18.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+
+            if (hayRespuestas) {
+                // Mostrar cada respuesta correcta
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    respuestasCorrectas.forEach { respuesta ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AppColors.Background)
+                                .padding(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment     = Alignment.Top
+                        ) {
+                            Text(
+                                text  = "•",
+                                color = AppColors.Accent,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text     = respuesta,
+                                color    = AppColors.Text,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Mensaje generico, cuando no hay correct en questions
+                Text(
+                    text     = "Tu respuesta ha sido enviada correctamente.",
+                    color    = AppColors.TextSecondary,
+                    fontSize = 14.sp
+                )
+            }
+
+            // Boton cerrar
+            Button(
+                onClick  = onDismiss,
+                modifier = Modifier.align(Alignment.End),
+                colors   = ButtonDefaults.buttonColors(containerColor = AppColors.Accent),
+                shape    = RoundedCornerShape(8.dp)
+            ) {
+                Text("Cerrar", color = AppColors.Text)
+            }
+        }
+    }
+}
+
+// ===== Dispatcher principal =====
 
 @Composable
 fun FormElementRender(
@@ -202,7 +336,7 @@ fun FormElementRender(
     }
 }
 
-/* ========= seccion ========== */
+// ===== SECTION =====
 
 @Composable
 fun SectionRender(
@@ -211,11 +345,9 @@ fun SectionRender(
     inheritedHeight: Int?       = null,
     inheritedStyle:  StyleData? = null
 ) {
-    // Resolver dimensiones: propias heredadas fillMax
     val resolvedWidth  = section.width  ?: inheritedWidth
     val resolvedHeight = section.height ?: inheritedHeight
 
-    // Resolver estilo: el propio sobreescribe al heredado campo por campo
     val parentStyle = inheritedStyle ?: StyleData()
     val style = StyleData(
         color           = section.style.color.ifEmpty           { parentStyle.color },
@@ -227,27 +359,32 @@ fun SectionRender(
         borderColor     = section.style.borderColor.ifEmpty     { parentStyle.borderColor }
     )
 
-    // Si tiene pointX/pointY se posiciona de forma absoluta dentro de su padre
-    val offsetModifier = if (section.pointX != null && section.pointY != null) {
-        Modifier.absoluteOffset(section.pointX.dp, section.pointY.dp)
-    } else Modifier
-
-    val sizeModifier = offsetModifier
-        .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)   else Modifier.fillMaxWidth())
-        .then(if (resolvedHeight != null) Modifier.height(resolvedHeight.dp) else Modifier.wrapContentHeight())
+    // En VERTICAL la seccion crece con su contenido (wrapContentHeight)
+    // En HORIZONTAL respeta el height definido
+    val sizeModifier = Modifier
+        .then(if (resolvedWidth != null) Modifier.width(resolvedWidth.dp) else Modifier.fillMaxWidth())
+        .then(
+            when {
+                section.orientation == "HORIZONTAL" && resolvedHeight != null ->
+                    Modifier.height(resolvedHeight.dp)
+                resolvedHeight != null ->
+                    Modifier.heightIn(min = resolvedHeight.dp)
+                else ->
+                    Modifier.wrapContentHeight()
+            }
+        )
         .applyStyle(style)
 
-    // Calcular dimensiones para pasar a hijos
-    // En HORIZONTAL cada hijo recibe width = resolvedWidth / cantidad de hijos
-    // En VERTICAL cada hijo recibe el mismo width que el padre
     val childCount = section.elements.size.coerceAtLeast(1)
     val childInheritedWidth = when {
         section.orientation == "HORIZONTAL" && resolvedWidth != null -> resolvedWidth / childCount
         else -> resolvedWidth
     }
+    // En VERTICAL los hijos NO heredan height cada uno toma el espacio que necesita
+    // En HORIZONTAL los hijos heredan el height de la seccion padre
     val childInheritedHeight = when {
-        section.orientation == "VERTICAL" && resolvedHeight != null -> resolvedHeight / childCount
-        else -> resolvedHeight
+        section.orientation == "HORIZONTAL" -> resolvedHeight
+        else -> null
     }
 
     if (section.orientation == "HORIZONTAL") {
@@ -299,7 +436,7 @@ fun mergeStyle(own: StyleData, parent: StyleData?): StyleData {
     )
 }
 
-/* ========= open questions ========== */
+// ===== OPEN_QUESTION =====
 
 @Composable
 fun OpenQuestionRender(
@@ -315,8 +452,8 @@ fun OpenQuestionRender(
 
     Column(
         modifier = Modifier
-            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)   else Modifier.fillMaxWidth())
-            .then(if (resolvedHeight != null) Modifier.height(resolvedHeight.dp) else Modifier)
+            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)        else Modifier.fillMaxWidth())
+            .then(if (resolvedHeight != null) Modifier.heightIn(min = resolvedHeight.dp) else Modifier)
             .applyStyle(style)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -346,8 +483,8 @@ fun OpenQuestionRender(
     }
 }
 
+// ===== DROP_QUESTION =====
 
-/* ========= drop questions ========== */
 @Composable
 fun DropQuestionRender(
     q: FormElement.DropQuestion,
@@ -363,8 +500,8 @@ fun DropQuestionRender(
 
     Column(
         modifier = Modifier
-            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)   else Modifier.fillMaxWidth())
-            .then(if (resolvedHeight != null) Modifier.height(resolvedHeight.dp) else Modifier)
+            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)           else Modifier.fillMaxWidth())
+            .then(if (resolvedHeight != null) Modifier.heightIn(min = resolvedHeight.dp) else Modifier)
             .applyStyle(style)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -406,7 +543,7 @@ fun DropQuestionRender(
     }
 }
 
-/* ========= select questions ========== */
+// ===== SELECT_QUESTION =====
 
 @Composable
 fun SelectQuestionRender(
@@ -422,8 +559,8 @@ fun SelectQuestionRender(
 
     Column(
         modifier = Modifier
-            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)   else Modifier.fillMaxWidth())
-            .then(if (resolvedHeight != null) Modifier.height(resolvedHeight.dp) else Modifier)
+            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)           else Modifier.fillMaxWidth())
+            .then(if (resolvedHeight != null) Modifier.heightIn(min = resolvedHeight.dp) else Modifier)
             .applyStyle(style)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -447,7 +584,7 @@ fun SelectQuestionRender(
     }
 }
 
-/* ========= multiple questions ========== */
+// ===== MULTIPLE_QUESTION =====
 
 @Composable
 fun MultipleQuestionRender(
@@ -463,8 +600,8 @@ fun MultipleQuestionRender(
 
     Column(
         modifier = Modifier
-            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)   else Modifier.fillMaxWidth())
-            .then(if (resolvedHeight != null) Modifier.height(resolvedHeight.dp) else Modifier)
+            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)           else Modifier.fillMaxWidth())
+            .then(if (resolvedHeight != null) Modifier.heightIn(min = resolvedHeight.dp) else Modifier)
             .applyStyle(style)
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -489,7 +626,7 @@ fun MultipleQuestionRender(
 }
 
 
-/* ========= table ========== */
+// ===== TABLE =====
 
 @Composable
 fun TableRender(
@@ -536,7 +673,7 @@ fun TableRender(
     }
 }
 
-/* ========= text element ========== */
+// ===== TEXT_ELEMENT =====
 
 @Composable
 fun TextElementRender(
@@ -550,8 +687,8 @@ fun TextElementRender(
     val style = mergeStyle(t.style, inheritedStyle)
     Box(
         modifier = Modifier
-            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)   else Modifier.fillMaxWidth())
-            .then(if (resolvedHeight != null) Modifier.height(resolvedHeight.dp) else Modifier)
+            .then(if (resolvedWidth  != null) Modifier.width(resolvedWidth.dp)           else Modifier.fillMaxWidth())
+            .then(if (resolvedHeight != null) Modifier.heightIn(min = resolvedHeight.dp) else Modifier)
             .applyStyle(style)
             .padding(8.dp)
     ) {
@@ -564,26 +701,14 @@ fun TextElementRender(
     }
 }
 
-/* ========= UI auxiliar ========== */
-@Composable
-private fun CorrectAnswerBanner(message: String, onDismiss: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(AppColors.Accent)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(text = message, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-            Icon(imageVector = Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
-        }
-    }
-}
+// ===== UI auxiliar =====
 
 @Composable
-private fun FormViewActionBar(onBackToEditor: () -> Unit, onSend: () -> Unit) {
+private fun FormViewActionBar(
+    onBackToEditor: () -> Unit,
+    onSend: () -> Unit,
+    modoContestacion: Boolean = false
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -592,19 +717,21 @@ private fun FormViewActionBar(onBackToEditor: () -> Unit, onSend: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         OutlinedButton(
-            onClick = onBackToEditor,
+            onClick  = onBackToEditor,
             modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.FormText),
-            border = BorderStroke(1.dp, Color(0xFF9E9E9E))
+            colors   = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.FormText),
+            border   = BorderStroke(1.dp, Color(0xFF9E9E9E))
         ) {
             Text("Back to edit", fontSize = 13.sp)
         }
-        Button(
-            onClick = onSend,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(containerColor = AppColors.SendButton)
-        ) {
-            Text("Send", fontSize = 13.sp, color = Color.White)
+        if (modoContestacion) {
+            Button(
+                onClick  = onSend,
+                modifier = Modifier.weight(1f),
+                colors   = ButtonDefaults.buttonColors(containerColor = AppColors.SendButton)
+            ) {
+                Text("Send", fontSize = 13.sp, color = Color.White)
+            }
         }
     }
 }

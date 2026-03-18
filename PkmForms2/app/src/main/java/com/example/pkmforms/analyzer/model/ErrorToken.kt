@@ -7,9 +7,9 @@ data class ErrorToken(
     val type: ErrorType,
     val description: String
 )
-
 enum class ErrorType {
     LEXICO,
     SINTACTICO,
-    SEMANTICO
+    SEMANTICO,
+    ADVERTENCIA
 }

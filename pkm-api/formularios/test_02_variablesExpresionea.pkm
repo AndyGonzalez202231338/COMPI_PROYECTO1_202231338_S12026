@@ -1,0 +1,30 @@
+###
+Author: Pauly González
+Fecha: 16/03/2026
+Hora: 16:36
+Description: Comprobar variables
+Total de Secciones: 1
+Total de Preguntas: 1
+    Abiertas: 1
+    Desplegables: 0
+    Seleccion: 0
+    Multiples: 0
+###
+
+<section=300,440,10,10,VERTICAL>
+    <style>
+        <color=BLACK/>
+        <background color=WHITE/>
+        <font family=SANS_SERIF/>
+        <text size=14>
+    </style>
+    <content>
+        <text=0,0,"Titulo: calculado con variables">
+            <style>
+                <color=PURPLE/>
+                <font family=MONO/>
+                <text size=18>
+            </style>
+        </text>        <open=160,70,"Comentario adicional"/>
+    </content>
+</section>

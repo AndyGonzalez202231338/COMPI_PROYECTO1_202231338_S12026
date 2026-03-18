@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pkmforms.analyzer.PkmExporter
+import com.example.pkmforms.analyzer.PkmImporter
 import com.example.pkmforms.analyzer.model.FormElement
 import com.example.pkmforms.api.ApiConfig
 import com.example.pkmforms.api.ApiService
@@ -32,11 +33,13 @@ fun OptionsScreen(
     onOpenCodeFile: () -> Unit,
     onSaveCodeFile: () -> Unit,
     onOpenFormFile: () -> Unit,
+    onExploreServer: () -> Unit = {},
     onFinish: () -> Unit,
     formElements: List<FormElement> = emptyList(),
     codeText: String = "",
     hasErrors: Boolean = false,
-    onCodeLoaded: (String) -> Unit = {}
+    onCodeLoaded: (String) -> Unit = {},
+    onPkmLocalCargado: (List<FormElement>) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope   = rememberCoroutineScope()
@@ -47,9 +50,9 @@ fun OptionsScreen(
     var subiendo             by remember { mutableStateOf(false) }
     var mensajeSubida        by remember { mutableStateOf<String?>(null) }
 
-    // IP actual leida de SharedPreferences, se actualiza cuando el usuario la cambia
     var ipActual by remember { mutableStateOf(ApiConfig.getIp(context)) }
 
+    // Launcher para abrir .form
     val abrirFormLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -59,6 +62,27 @@ fun OptionsScreen(
                 onCodeLoaded(contenido)
                 onBack()
                 Toast.makeText(context, "Archivo cargado", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "No se pudo leer el archivo", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Launcher para abrir .pkm local
+    val abrirPkmLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val contenido = leerArchivoDesdeUri(context, uri)
+            if (contenido != null) {
+                val resultado = PkmImporter.importar(contenido)
+                if (resultado.error != null) {
+                    Toast.makeText(context, "Error al leer .pkm: ${resultado.error}", Toast.LENGTH_LONG).show()
+                } else if (resultado.elementos.isEmpty()) {
+                    Toast.makeText(context, "El archivo .pkm no contiene elementos", Toast.LENGTH_SHORT).show()
+                } else {
+                    onPkmLocalCargado(resultado.elementos)
+                }
             } else {
                 Toast.makeText(context, "No se pudo leer el archivo", Toast.LENGTH_SHORT).show()
             }
@@ -90,7 +114,10 @@ fun OptionsScreen(
         OptionButton(label = "Save code file") { mostrarDialogoForm = true }
         Spacer(modifier = Modifier.height(12.dp))
 
-        OptionButton(label = "Open form file", onClick = onOpenFormFile)
+        // Abre un .pkm local para contestarlo
+        OptionButton(label = "Open form file") {
+            abrirPkmLauncher.launch(arrayOf("application/octet-stream", "text/plain", "*/*"))
+        }
         Spacer(modifier = Modifier.height(12.dp))
 
         OptionButton(
@@ -141,7 +168,7 @@ fun OptionsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Boton configurar servidor
+        // Boton configurar servidor colocar la ip de la computadora
         OptionButton(
             label   = "Server config",
             onClick = { mostrarDialogoConfig = true }
@@ -155,6 +182,8 @@ fun OptionsScreen(
             fontSize = 11.sp
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+        OptionButton(label = "Explore forms", onClick = onExploreServer)
         Spacer(modifier = Modifier.height(12.dp))
         OptionButton(label = "Finish", onClick = onFinish)
         Spacer(modifier = Modifier.height(12.dp))
@@ -235,9 +264,6 @@ fun OptionsScreen(
         }
     }
 }
-
-
-// Helpers
 
 private fun guardarArchivoLocal(
     context: Context,
