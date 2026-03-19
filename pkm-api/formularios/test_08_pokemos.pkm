@@ -1,8 +1,8 @@
 ###
-Author: Pauly Waleska
-Fecha: 16/03/2026
-Hora: 17:24
-Description: pokemones multiquest
+Author: Andy González
+Fecha: 18/03/2026
+Hora: 12:47
+Description: pokemosn
 Total de Secciones: 3
 Total de Preguntas: 2
     Abiertas: 0
@@ -19,8 +19,8 @@ Total de Preguntas: 2
         <text size=14>
     </style>
     <content>
-        <text=0,50,"Condicion OR verdadera 😀"/>
-        <drop=340,100,"Adivina el pokemon (rango 1-10)",{},3/>
+        <text=0,50,"Condicion OR verdadera @[:smile:]"/>
+        <drop=340,100,"Adivina el pokemon (rango 1-10)",{"Bulbasaur", "Ivysaur", "Venusaur", "Charmander", "Charmeleon", "Charizard", "Squirtle", "Wartortle", "Blastoise", "Caterpie"},3/>
     </content>
 </section>
 <section=360,300,0,60,VERTICAL>
@@ -31,8 +31,8 @@ Total de Preguntas: 2
         <text size=14>
     </style>
     <content>
-        <text=0,50,"Condicion AND verdadera ⭐"/>
-        <drop=340,100,"Pokemon del rango 50-60",{},0/>
+        <text=0,50,"Condicion AND verdadera @[:star:]"/>
+        <drop=340,100,"Pokemon del rango 50-60",{"Diglett", "Dugtrio", "Meowth", "Persian", "Psyduck", "Golduck", "Mankey", "Primeape", "Growlithe", "Arcanine", "Poliwag"},0/>
     </content>
 </section>
 <section=360,120,0,80,VERTICAL>
@@ -43,6 +43,6 @@ Total de Preguntas: 2
         <text size=14>
     </style>
     <content>
-        <text=0,0,"Negacion aplicada correctamente 😺"/>
+        <text=0,0,"Negacion aplicada correctamente @[:cat:]"/>
     </content>
 </section>

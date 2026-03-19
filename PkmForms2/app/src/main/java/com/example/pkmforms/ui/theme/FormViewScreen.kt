@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -16,20 +15,32 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.draw.clip
 import com.example.pkmforms.ui.theme.components.TopBar
 import com.example.pkmforms.analyzer.model.FormElement
 import com.example.pkmforms.analyzer.model.StyleData
 
-// ====== Helpers de estilo ======
+// ===== Estado compartido de respuestas del usuario =====
+
+val LocalRespuestas = compositionLocalOf<SnapshotStateMap<Int, Any>> {
+    @Suppress("UNCHECKED_CAST")
+    mutableStateMapOf<Int, Any>() as SnapshotStateMap<Int, Any>
+}
+
+val LocalContadorPreguntas = compositionLocalOf<MutableState<Int>> {
+    mutableStateOf(0)
+}
+
+// ===== Helpers de estilo =====
 private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color {
     val s = raw.trim()
     if (s.isEmpty()) return fallback
@@ -50,7 +61,7 @@ private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color 
                 )
             }
 
-            // HSL: <h,s,l>
+            // HSL: <h,s,l> — formato del lexer con angulos
             su.startsWith("<") && su.endsWith(">") -> {
                 val nums = su.removePrefix("<").removeSuffix(">").split(",")
                 val h = nums[0].trim().toFloat()          // 0-360
@@ -59,7 +70,7 @@ private fun parseColor(raw: String, fallback: Color = Color.Unspecified): Color 
                 hslToColor(h, sl, l)
             }
 
-            // Colores predefinidos por nombre para textos ingresados
+            // Colores predefinidos por nombre
             else -> when (su) {
                 "RED"    -> Color(0xFFE53935)
                 "BLUE"   -> Color(0xFF1565C0)
@@ -114,10 +125,9 @@ private fun Modifier.applyStyle(style: StyleData): Modifier {
     var m = this
     val bg = style.bgColor()
     if (bg != Color.Unspecified) m = m.background(bg, RoundedCornerShape(6.dp))
-    val bw = style.borderWidthDp()
-    if (bw > 0.dp) {
+    if (style.borderSize > 0f) {
         val shape = RoundedCornerShape(4.dp)
-        m = m.border(bw, style.borderColor2(), shape)
+        m = m.border(style.borderSize.dp, style.borderColor2(), shape)
     }
     return m
 }
@@ -134,122 +144,212 @@ fun FormViewScreen(
 ) {
     var mostrarDialogoEnvio by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.Background)
-    ) {
-        TopBar(
-            title = "PKM_FORMS",
-            onMenuClick = onNavigateOptions
-        )
+    // Estado compartido de respuestas se resetea cuando cambian los elements
+    val respuestasUsuario = remember(elements) { mutableStateMapOf<Int, Any>() }
+    val contadorPreguntas = remember(elements) { mutableStateOf(0) }
 
-        val hScroll = rememberScrollState()
+    CompositionLocalProvider(
+        LocalRespuestas          provides respuestasUsuario,
+        LocalContadorPreguntas   provides contadorPreguntas
+    ) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .background(AppColors.FormBackground)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-                .horizontalScroll(hScroll),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxSize()
+                .background(AppColors.Background)
         ) {
-            if (elements.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "El formulario generado aparecera aqui",
-                        color = AppColors.FormTextSecondary,
-                        fontSize = 13.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-            } else {
-                elements.forEach { element ->
-                    FormElementRender(element = element)
+            TopBar(
+                title = "PKM_FORMS",
+                onMenuClick = onNavigateOptions
+            )
+
+            val hScroll = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(AppColors.FormBackground)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+                    .horizontalScroll(hScroll),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (elements.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "El formulario generado aparecera aqui",
+                            color = AppColors.FormTextSecondary,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                } else {
+                    // Resetear contador antes de renderizar
+                    contadorPreguntas.value = 0
+                    elements.forEach { element ->
+                        FormElementRender(element = element)
+                    }
                 }
             }
+
+            FormViewActionBar(
+                onBackToEditor   = onBackToEditor,
+                onSend           = { mostrarDialogoEnvio = true },
+                modoContestacion = modoContestacion
+            )
         }
 
-        FormViewActionBar(
-            onBackToEditor    = onBackToEditor,
-            onSend            = { mostrarDialogoEnvio = true },
-            modoContestacion  = modoContestacion
-        )
-    }
-
-    // Dialog de envio
-    if (mostrarDialogoEnvio) {
-        val respuestasCorrectas = construirMensajeRespuestas(elements)
-        SendDialog(
-            respuestasCorrectas = respuestasCorrectas,
-            onDismiss           = {
-                mostrarDialogoEnvio = false
-                onSent()
-            }
-        )
+        // Dialog de envio
+        if (mostrarDialogoEnvio) {
+            val resultado = calcularResultado(elements, respuestasUsuario)
+            SendDialog(
+                resultado = resultado,
+                onDismiss = {
+                    mostrarDialogoEnvio = false
+                    onSent()
+                }
+            )
+        }
     }
 }
 
-// ===== Construir mensaje de respuestas correctas =====
-/* Recorre todos los elementos recursivamente y recolecta las respuestas correctas
- de DROP, SELECT y MULTIPLE que tengan correct definido */
+// ===== Resultado del formulario =====
 
-private fun construirMensajeRespuestas(elementos: List<FormElement>): List<String> {
-    val resultado = mutableListOf<String>()
-    var contador  = 1
+data class ResultadoFormulario(
+    val totalPreguntas:    Int,
+    val preguntasConNota:  Int,   // preguntas que tienen respuesta correcta definida
+    val correctas:         Int,   // preguntas que el usuario respondió bien
+    val detalles:          List<DetalleRespuesta>
+)
+
+data class DetalleRespuesta(
+    val numero:          Int,
+    val label:           String,
+    val respuestaUsuario: String,
+    val respuestaCorrecta: String,
+    val esCorrecta:      Boolean?,  // null = pregunta abierta, sin calificacion
+    val tieneNota:       Boolean
+)
+
+private fun calcularResultado(
+    elementos: List<FormElement>,
+    respuestas: Map<Int, Any>
+): ResultadoFormulario {
+    val detalles   = mutableListOf<DetalleRespuesta>()
+    var contador   = 0
+    var conNota    = 0
+    var correctas  = 0
 
     fun recorrer(lista: List<FormElement>) {
         for (el in lista) {
             when (el) {
+                is FormElement.OpenQuestion -> {
+                    val respuesta = respuestas[contador] as? String ?: ""
+                    detalles.add(DetalleRespuesta(
+                        numero           = contador + 1,
+                        label            = el.label.ifBlank { "Pregunta abierta" },
+                        respuestaUsuario  = respuesta.ifBlank { "(sin respuesta)" },
+                        respuestaCorrecta = "",
+                        esCorrecta        = null,
+                        tieneNota         = false
+                    ))
+                    contador++
+                }
                 is FormElement.DropQuestion -> {
-                    if (el.correct >= 0 && el.correct < el.options.size) {
-                        val correcta = el.options[el.correct]
-                        resultado.add("Pregunta $contador (${el.label.ifBlank { "Desplegable" }}): $correcta")
+                    val seleccion = respuestas[contador] as? String ?: ""
+                    val tieneCorrecta = el.correct >= 0 && el.correct < el.options.size
+                    val correcta = if (tieneCorrecta) el.options[el.correct] else ""
+                    val esCorrecta = if (tieneCorrecta) seleccion == correcta else null
+                    if (tieneCorrecta) {
+                        conNota++
+                        if (esCorrecta == true) correctas++
                     }
+                    detalles.add(DetalleRespuesta(
+                        numero            = contador + 1,
+                        label             = el.label.ifBlank { "Desplegable" },
+                        respuestaUsuario  = seleccion.ifBlank { "(sin respuesta)" },
+                        respuestaCorrecta = correcta,
+                        esCorrecta        = esCorrecta,
+                        tieneNota         = tieneCorrecta
+                    ))
                     contador++
                 }
                 is FormElement.SelectQuestion -> {
-                    if (el.correct >= 0 && el.correct < el.options.size) {
-                        val correcta = el.options[el.correct]
-                        resultado.add("Pregunta $contador: $correcta")
+                    val seleccion = respuestas[contador] as? Int
+                    val tieneCorrecta = el.correct >= 0 && el.correct < el.options.size
+                    val correcta = if (tieneCorrecta) el.options[el.correct] else ""
+                    val respUsuario = if (seleccion != null && seleccion < el.options.size)
+                        el.options[seleccion] else "(sin respuesta)"
+                    val esCorrecta = if (tieneCorrecta) seleccion == el.correct else null
+                    if (tieneCorrecta) {
+                        conNota++
+                        if (esCorrecta == true) correctas++
                     }
+                    detalles.add(DetalleRespuesta(
+                        numero            = contador + 1,
+                        label             = el.label.ifBlank { "Selección" },
+                        respuestaUsuario  = respUsuario,
+                        respuestaCorrecta = correcta,
+                        esCorrecta        = esCorrecta,
+                        tieneNota         = tieneCorrecta
+                    ))
                     contador++
                 }
                 is FormElement.MultipleQuestion -> {
-                    if (el.correct.isNotEmpty()) {
-                        val correctas = el.correct
-                            .filter { it >= 0 && it < el.options.size }
-                            .joinToString(", ") { el.options[it] }
-                        if (correctas.isNotBlank()) {
-                            resultado.add("Pregunta $contador: $correctas")
-                        }
+                    @Suppress("UNCHECKED_CAST")
+                    val seleccion = (respuestas[contador] as? List<Int>) ?: emptyList()
+                    val tieneCorrecta = el.correct.isNotEmpty()
+                    val correctaTexto = el.correct
+                        .filter { it >= 0 && it < el.options.size }
+                        .joinToString(", ") { el.options[it] }
+                    val usuarioTexto = seleccion
+                        .filter { it >= 0 && it < el.options.size }
+                        .joinToString(", ") { el.options[it] }
+                        .ifBlank { "(sin respuesta)" }
+                    val esCorrecta = if (tieneCorrecta)
+                        seleccion.toSet() == el.correct.toSet() else null
+                    if (tieneCorrecta) {
+                        conNota++
+                        if (esCorrecta == true) correctas++
                     }
+                    detalles.add(DetalleRespuesta(
+                        numero            = contador + 1,
+                        label             = el.label.ifBlank { "Múltiple" },
+                        respuestaUsuario  = usuarioTexto,
+                        respuestaCorrecta = correctaTexto,
+                        esCorrecta        = esCorrecta,
+                        tieneNota         = tieneCorrecta
+                    ))
                     contador++
                 }
-                is FormElement.OpenQuestion -> contador++
-                is FormElement.Section      -> recorrer(el.elements)
-                is FormElement.Table        -> el.rows.forEach { fila -> fila.filterNotNull().let { recorrer(it) } }
-                is FormElement.TextElement  -> { /* sin respuesta */ }
+                is FormElement.Section     -> recorrer(el.elements)
+                is FormElement.Table       -> el.rows.forEach { fila ->
+                    fila.filterNotNull().let { recorrer(it) }
+                }
+                is FormElement.TextElement -> { /* sin respuesta */ }
             }
         }
     }
 
     recorrer(elementos)
-    return resultado
+    return ResultadoFormulario(
+        totalPreguntas   = contador,
+        preguntasConNota = conNota,
+        correctas        = correctas,
+        detalles         = detalles
+    )
 }
 
-// ===== Dialog de envio =====
+// ===== Dialog de envio con puntuacion =====
 
 @Composable
 private fun SendDialog(
-    respuestasCorrectas: List<String>,
+    resultado: ResultadoFormulario,
     onDismiss: () -> Unit
 ) {
-    val hayRespuestas = respuestasCorrectas.isNotEmpty()
+    val tieneNota = resultado.preguntasConNota > 0
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -257,45 +357,133 @@ private fun SendDialog(
                 .clip(RoundedCornerShape(16.dp))
                 .background(AppColors.Surface)
                 .padding(24.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Titulo
             Text(
-                text       = if (hayRespuestas) "Respuestas correctas" else "Formulario enviado",
+                text       = if (tieneNota) "Resultado del formulario" else "Formulario enviado",
                 color      = AppColors.Text,
                 fontSize   = 18.sp,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                fontWeight = FontWeight.Bold
             )
 
-            if (hayRespuestas) {
-                // Mostrar cada respuesta correcta
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    respuestasCorrectas.forEach { respuesta ->
-                        Row(
+            if (tieneNota) {
+                // Puntaje
+                val puntaje = if (resultado.preguntasConNota > 0)
+                    (resultado.correctas * 100) / resultado.preguntasConNota else 0
+
+                val (mensajeNota, colorNota) = when {
+                    puntaje == 100 -> "¡Perfecto! " to Color(0xFF4CAF50)
+                    puntaje >= 75  -> "¡Muy bien! " to Color(0xFF8BC34A)
+                    puntaje >= 50  -> "Aprobado "   to Color(0xFFFFC107)
+                    else           -> "Sigue intentando " to Color(0xFFF44336)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AppColors.Accent.copy(alpha = 0.15f))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text       = "$puntaje%",
+                            color      = colorNota,
+                            fontSize   = 48.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text     = mensajeNota,
+                            color    = colorNota,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        // Barra de progreso
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(AppColors.Background)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(puntaje / 100f)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(colorNota)
+                            )
+                        }
+                        Text(
+                            text     = "${resultado.correctas} de ${resultado.preguntasConNota} preguntas correctas",
+                            color    = AppColors.TextSecondary,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+
+                // Detalle por pregunta
+                resultado.detalles.forEach { detalle ->
+                    if (detalle.tieneNota || detalle.esCorrecta == null) {
+                        val colorFondo = when (detalle.esCorrecta) {
+                            true  -> Color(0xFF1B5E20).copy(alpha = 0.15f)
+                            false -> Color(0xFFB71C1C).copy(alpha = 0.15f)
+                            null  -> AppColors.Background
+                        }
+                        val icono = when (detalle.esCorrecta) {
+                            true  -> "✓"
+                            false -> "✗"
+                            null  -> "•"
+                        }
+                        val colorIcono = when (detalle.esCorrecta) {
+                            true  -> Color(0xFF4CAF50)
+                            false -> Color(0xFFF44336)
+                            null  -> AppColors.TextSecondary
+                        }
+
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(AppColors.Background)
+                                .background(colorFondo)
                                 .padding(10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment     = Alignment.Top
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(icono, color = colorIcono, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "P${detalle.numero}: ${detalle.label}",
+                                    color = AppColors.Text,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                             Text(
-                                text  = "•",
-                                color = AppColors.Accent,
-                                fontSize = 14.sp
+                                text = "Tu respuesta: ${detalle.respuestaUsuario}",
+                                color = AppColors.TextSecondary,
+                                fontSize = 12.sp
                             )
-                            Text(
-                                text     = respuesta,
-                                color    = AppColors.Text,
-                                fontSize = 13.sp
-                            )
+                            if (detalle.esCorrecta == false) {
+                                Text(
+                                    text = "Correcta: ${detalle.respuestaCorrecta}",
+                                    color = Color(0xFF4CAF50),
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
                     }
                 }
             } else {
-                // Mensaje generico, cuando no hay correct en questions
                 Text(
                     text     = "Tu respuesta ha sido enviada correctamente.",
                     color    = AppColors.TextSecondary,
@@ -303,7 +491,6 @@ private fun SendDialog(
                 )
             }
 
-            // Boton cerrar
             Button(
                 onClick  = onDismiss,
                 modifier = Modifier.align(Alignment.End),
@@ -336,7 +523,7 @@ fun FormElementRender(
     }
 }
 
-// ===== SECTION =====
+// ==== SECTION =====
 
 @Composable
 fun SectionRender(
@@ -380,7 +567,7 @@ fun SectionRender(
         section.orientation == "HORIZONTAL" && resolvedWidth != null -> resolvedWidth / childCount
         else -> resolvedWidth
     }
-    // En VERTICAL los hijos NO heredan height cada uno toma el espacio que necesita
+    // En VERTICAL los hijos NO heredan height — cada uno toma el espacio que necesita
     // En HORIZONTAL los hijos heredan el height de la seccion padre
     val childInheritedHeight = when {
         section.orientation == "HORIZONTAL" -> resolvedHeight
@@ -445,7 +632,15 @@ fun OpenQuestionRender(
     inheritedHeight: Int?       = null,
     inheritedStyle:  StyleData? = null
 ) {
+    val respuestas = LocalRespuestas.current
+    val contador   = LocalContadorPreguntas.current
+    val idx = remember { contador.value.also { contador.value++ } }
+
     var answer by remember { mutableStateOf("") }
+
+    // Sincronizar respuesta al estado compartido
+    LaunchedEffect(answer) { respuestas[idx] = answer }
+
     val resolvedWidth  = q.width  ?: inheritedWidth
     val resolvedHeight = q.height ?: inheritedHeight
     val style = mergeStyle(q.style, inheritedStyle)
@@ -468,7 +663,10 @@ fun OpenQuestionRender(
         }
         OutlinedTextField(
             value = answer,
-            onValueChange = { answer = it },
+            onValueChange = {
+                answer = it
+                respuestas[idx] = it
+            },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text("Escribe tu respuesta...", fontSize = 13.sp, color = AppColors.FormTextSecondary)
@@ -492,6 +690,10 @@ fun DropQuestionRender(
     inheritedHeight: Int?       = null,
     inheritedStyle:  StyleData? = null
 ) {
+    val respuestas = LocalRespuestas.current
+    val contador   = LocalContadorPreguntas.current
+    val idx = remember { contador.value.also { contador.value++ } }
+
     var expanded by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<String?>(null) }
     val resolvedWidth  = q.width  ?: inheritedWidth
@@ -535,7 +737,11 @@ fun DropQuestionRender(
                 q.options.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option, color = AppColors.FormText) },
-                        onClick = { selected = option; expanded = false }
+                        onClick = {
+                            selected = option
+                            respuestas[idx] = option
+                            expanded = false
+                        }
                     )
                 }
             }
@@ -553,6 +759,9 @@ fun SelectQuestionRender(
     inheritedStyle:  StyleData? = null
 ) {
     var selected by remember { mutableStateOf<Int?>(null) }
+    val respuestas = LocalRespuestas.current
+    val contador   = LocalContadorPreguntas.current
+    val idx = remember { contador.value.also { contador.value++ } }
     val resolvedWidth  = q.width  ?: inheritedWidth
     val resolvedHeight = q.height ?: inheritedHeight
     val style = mergeStyle(q.style, inheritedStyle)
@@ -565,11 +774,23 @@ fun SelectQuestionRender(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        if (q.label.isNotBlank()) {
+            Text(
+                text       = q.label,
+                color      = style.textColor(),
+                fontSize   = style.textSizeSp(),
+                fontFamily = style.fontFamilyCompose(),
+                fontWeight = FontWeight.Medium
+            )
+        }
         q.options.forEachIndexed { index, option ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 RadioButton(
                     selected = selected == index,
-                    onClick = { selected = index },
+                    onClick = {
+                        selected = index
+                        respuestas[idx] = index
+                    },
                     colors = RadioButtonDefaults.colors(selectedColor = AppColors.Accent)
                 )
                 Text(
@@ -593,6 +814,10 @@ fun MultipleQuestionRender(
     inheritedHeight: Int?       = null,
     inheritedStyle:  StyleData? = null
 ) {
+    val respuestas = LocalRespuestas.current
+    val contador   = LocalContadorPreguntas.current
+    val idx = remember { contador.value.also { contador.value++ } }
+
     val checked = remember { mutableStateMapOf<Int, Boolean>() }
     val resolvedWidth  = q.width  ?: inheritedWidth
     val resolvedHeight = q.height ?: inheritedHeight
@@ -606,11 +831,28 @@ fun MultipleQuestionRender(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        if (q.label.isNotBlank()) {
+            Text(
+                text       = q.label,
+                color      = style.textColor(),
+                fontSize   = style.textSizeSp(),
+                fontFamily = style.fontFamilyCompose(),
+                fontWeight = FontWeight.Medium
+            )
+        }
         q.options.forEachIndexed { index, option ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Checkbox(
                     checked = checked[index] == true,
-                    onCheckedChange = { checked[index] = it },
+                    onCheckedChange = { isChecked ->
+                        checked[index] = isChecked
+                        // Guardar lista de indices seleccionados
+                        val seleccionados = checked.entries
+                            .filter { it.value }
+                            .map { it.key }
+                            .sorted()
+                        respuestas[idx] = seleccionados
+                    },
                     colors = CheckboxDefaults.colors(checkedColor = AppColors.Accent)
                 )
                 Text(

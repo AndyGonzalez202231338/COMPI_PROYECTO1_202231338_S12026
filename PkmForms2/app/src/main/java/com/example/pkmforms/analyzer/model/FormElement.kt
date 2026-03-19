@@ -19,26 +19,27 @@ sealed class FormElement {
     ) : FormElement()
 
     data class DropQuestion(
-        val label:   String      = "",
+        val label:   String       = "",
         val options: List<String> = emptyList(),
-        val correct: Int         = -1,
-        val width:   Int?        = null,
-        val height:  Int?        = null,
-        val style:   StyleData   = StyleData()
+        val correct: Int          = -1,
+        val width:   Int?         = null,
+        val height:  Int?         = null,
+        val style:   StyleData    = StyleData()
     ) : FormElement()
 
     data class SelectQuestion(
+        val label:   String       = "",
         val options: List<String> = emptyList(),
-        val correct: Int         = -1,
-        val width:   Int?        = null,
-        val height:  Int?        = null,
-        val style:   StyleData   = StyleData()
+        val correct: Int          = -1,
+        val width:   Int?         = null,
+        val height:  Int?         = null,
+        val style:   StyleData    = StyleData()
     ) : FormElement()
 
     data class MultipleQuestion(
+        val label:   String      = "",
         val options: List<String> = emptyList(),
         val correct: List<Int>   = emptyList(),
-        val label:   String      = "",
         val width:   Int?        = null,
         val height:  Int?        = null,
         val style:   StyleData   = StyleData()

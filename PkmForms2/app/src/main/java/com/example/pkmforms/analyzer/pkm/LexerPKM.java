@@ -4,6 +4,7 @@
 
 /*
  * PKM_FORMS - Analizador Lexico para archivos .pkm
+ * Los emojis @[...] se resuelven a Unicode directamente en el lexer.
  */
 package com.example.pkmforms.analyzer.pkm;
 import java_cup.runtime.*;
@@ -22,6 +23,8 @@ public class LexerPKM implements java_cup.runtime.Scanner {
   // Lexical states.
   public static final int YYINITIAL = 0;
   public static final int META = 2;
+  public static final int CADENA_STATE = 4;
+  public static final int EMOJI_STATE = 6;
 
   /**
    * ZZ_LEXSTATE[l] is the state in the DFA for the lexical state l
@@ -30,7 +33,7 @@ public class LexerPKM implements java_cup.runtime.Scanner {
    * l is of the form l = 2*k, k a non negative integer
    */
   private static final int ZZ_LEXSTATE[] = {
-     0,  0,  1, 1
+     0,  0,  1,  1,  2,  2,  3, 3
   };
 
   /**
@@ -69,16 +72,17 @@ public class LexerPKM implements java_cup.runtime.Scanner {
   private static final String ZZ_CMAP_BLOCKS_PACKED_0 =
     "\11\0\1\1\1\2\2\3\1\1\22\0\1\4\1\0"+
     "\1\5\1\6\4\0\1\7\1\10\2\0\1\11\1\12"+
-    "\1\13\1\14\12\15\2\0\1\16\1\17\1\20\2\0"+
+    "\1\13\1\14\12\15\2\0\1\16\1\17\1\20\1\0"+
     "\1\21\1\22\1\23\1\24\1\25\1\26\1\27\1\30"+
-    "\1\31\1\0\1\32\1\33\1\34\1\35\1\36\1\37"+
-    "\1\0\1\40\1\41\1\42\1\43\1\44\1\45\1\46"+
-    "\1\47\1\50\4\0\1\51\1\0\1\21\1\22\1\23"+
-    "\1\24\1\25\1\26\1\27\1\30\1\31\1\0\1\32"+
-    "\1\33\1\34\1\35\1\36\1\37\1\0\1\40\1\41"+
-    "\1\42\1\43\1\44\1\45\1\46\1\47\1\50\1\52"+
-    "\1\0\1\53\7\0\1\3\252\0\2\31\115\0\1\41"+
-    "\u01a8\0\2\3\u0100\0\1\32\325\0\u0100\3";
+    "\1\31\1\32\1\0\1\33\1\34\1\35\1\36\1\37"+
+    "\1\40\1\0\1\41\1\42\1\43\1\44\1\45\1\46"+
+    "\1\47\1\50\1\51\1\52\1\0\1\53\1\0\1\54"+
+    "\1\0\1\22\1\23\1\24\1\25\1\26\1\27\1\30"+
+    "\1\31\1\32\1\0\1\33\1\34\1\35\1\36\1\37"+
+    "\1\40\1\0\1\41\1\42\1\43\1\44\1\45\1\46"+
+    "\1\47\1\50\1\51\1\55\1\0\1\56\7\0\1\3"+
+    "\252\0\2\32\115\0\1\42\u01a8\0\2\3\u0100\0\1\33"+
+    "\325\0\u0100\3";
 
   private static int [] zzUnpackcmap_blocks() {
     int [] result = new int[1536];
@@ -105,22 +109,23 @@ public class LexerPKM implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ACTION = zzUnpackAction();
 
   private static final String ZZ_ACTION_PACKED_0 =
-    "\2\0\5\1\1\2\1\3\1\4\1\5\1\1\1\6"+
-    "\15\1\1\7\1\10\1\11\1\12\1\0\1\13\3\0"+
-    "\1\14\35\0\1\15\2\0\1\5\41\0\1\16\1\0"+
-    "\1\17\3\0\1\20\35\0\1\21\6\0\1\22\1\23"+
-    "\42\0\1\24\4\0\1\25\4\0\1\26\23\0\1\27"+
-    "\2\0\1\30\1\0\1\31\5\0\1\32\1\0\1\33"+
-    "\1\34\1\0\1\35\2\0\1\36\1\37\1\0\1\40"+
-    "\1\0\1\41\1\0\1\42\4\0\1\43\2\0\1\44"+
-    "\6\0\1\45\1\46\1\0\1\47\10\0\1\50\1\51"+
-    "\1\0\1\52\5\0\1\53\3\0\1\54\4\0\1\55"+
-    "\1\0\1\56\1\57\2\0\1\60\3\0\1\61\1\62"+
-    "\1\0\1\63\2\0\1\64\1\0\1\65\1\66\1\67"+
-    "\2\0\1\70\3\0\1\71\4\0\1\72";
+    "\4\0\2\1\1\2\2\1\1\3\1\4\1\5\1\6"+
+    "\1\1\1\7\15\1\1\10\1\11\2\1\1\12\1\13"+
+    "\1\12\1\14\3\0\1\15\35\0\1\16\1\17\2\0"+
+    "\1\6\41\0\1\20\1\0\1\21\3\0\1\22\35\0"+
+    "\1\23\6\0\1\24\1\25\42\0\1\26\4\0\1\27"+
+    "\4\0\1\30\23\0\1\31\2\0\1\32\1\0\1\33"+
+    "\5\0\1\34\1\0\1\35\1\36\1\0\1\37\2\0"+
+    "\1\40\1\41\1\0\1\42\1\0\1\43\1\0\1\44"+
+    "\4\0\1\45\2\0\1\46\6\0\1\47\1\50\1\0"+
+    "\1\51\10\0\1\52\1\53\1\0\1\54\5\0\1\55"+
+    "\3\0\1\56\4\0\1\57\1\0\1\60\1\61\2\0"+
+    "\1\62\3\0\1\63\1\64\1\0\1\65\2\0\1\66"+
+    "\1\0\1\67\1\70\1\71\2\0\1\72\3\0\1\73"+
+    "\4\0\1\74";
 
   private static int [] zzUnpackAction() {
-    int [] result = new int[315];
+    int [] result = new int[320];
     int offset = 0;
     offset = zzUnpackAction(ZZ_ACTION_PACKED_0, offset, result);
     return result;
@@ -145,49 +150,49 @@ public class LexerPKM implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ROWMAP = zzUnpackRowMap();
 
   private static final String ZZ_ROWMAP_PACKED_0 =
-    "\0\0\0\54\0\130\0\204\0\260\0\334\0\u0108\0\130"+
-    "\0\130\0\u0134\0\u0160\0\u018c\0\130\0\u01b8\0\u01e4\0\u0210"+
-    "\0\u023c\0\u0268\0\u0294\0\u02c0\0\u02ec\0\u0318\0\u0344\0\u0370"+
-    "\0\u039c\0\u03c8\0\130\0\130\0\u03f4\0\u0420\0\260\0\130"+
-    "\0\u044c\0\u0478\0\u04a4\0\130\0\u04d0\0\u04fc\0\u0528\0\u0554"+
-    "\0\u0580\0\u05ac\0\u05d8\0\u0604\0\u0630\0\u065c\0\u0688\0\u06b4"+
-    "\0\u06e0\0\u070c\0\u0738\0\u0764\0\u0790\0\u07bc\0\u07e8\0\u0814"+
-    "\0\u0840\0\u086c\0\u0898\0\u08c4\0\u08f0\0\u091c\0\u0948\0\u0974"+
-    "\0\u09a0\0\130\0\u09cc\0\u09f8\0\u04d0\0\u0a24\0\u0a50\0\u0a7c"+
-    "\0\u0aa8\0\u0ad4\0\u0b00\0\u0b2c\0\u0b58\0\u0b84\0\u0bb0\0\u0bdc"+
-    "\0\u0c08\0\u0c34\0\u0c60\0\u0c8c\0\u0cb8\0\u0ce4\0\u0d10\0\u0d3c"+
-    "\0\u0d68\0\u0d94\0\u0dc0\0\u0dec\0\u0e18\0\u0e44\0\u0e70\0\u0e9c"+
-    "\0\u0ec8\0\u0ef4\0\u0f20\0\u0f4c\0\u0f78\0\u0fa4\0\130\0\u0fd0"+
-    "\0\130\0\u0ffc\0\u1028\0\u1054\0\130\0\u1080\0\u10ac\0\u10d8"+
-    "\0\u1104\0\u1130\0\u115c\0\u1188\0\u11b4\0\u11e0\0\u120c\0\u1238"+
-    "\0\u1264\0\u1290\0\u12bc\0\u12e8\0\u1314\0\u1340\0\u136c\0\u1398"+
-    "\0\u13c4\0\u13f0\0\u141c\0\u1448\0\u1474\0\u14a0\0\u14cc\0\u14f8"+
-    "\0\u1524\0\u1550\0\130\0\u157c\0\u15a8\0\u15d4\0\u1600\0\u162c"+
-    "\0\u1658\0\130\0\130\0\u1684\0\u16b0\0\u16dc\0\u1708\0\u1734"+
-    "\0\u1760\0\u178c\0\u17b8\0\u17e4\0\u1810\0\u183c\0\u1868\0\u1894"+
-    "\0\u18c0\0\u18ec\0\u1918\0\u1944\0\u1970\0\u199c\0\u19c8\0\u19f4"+
-    "\0\u1a20\0\u1a4c\0\u1a78\0\u1aa4\0\u1ad0\0\u1afc\0\u1b28\0\u1b54"+
-    "\0\u1b80\0\u1bac\0\u1bd8\0\u1c04\0\u1c30\0\130\0\u1c5c\0\u1c88"+
-    "\0\u1cb4\0\u1ce0\0\130\0\u1d0c\0\u1d38\0\u1d64\0\u1d90\0\130"+
-    "\0\u1dbc\0\u1de8\0\u1e14\0\u1e40\0\u1e6c\0\u1e98\0\u1ec4\0\u1ef0"+
-    "\0\u1f1c\0\u1f48\0\u1f74\0\u1fa0\0\u1fcc\0\u1ff8\0\u2024\0\u2050"+
-    "\0\u207c\0\u20a8\0\u20d4\0\130\0\u2100\0\u212c\0\130\0\u2158"+
-    "\0\130\0\u2184\0\u21b0\0\u21dc\0\u2208\0\u2234\0\130\0\u2260"+
-    "\0\130\0\130\0\u228c\0\130\0\u22b8\0\u22e4\0\130\0\130"+
-    "\0\u2310\0\130\0\u233c\0\130\0\u2368\0\130\0\u2394\0\u23c0"+
-    "\0\u23ec\0\u2418\0\130\0\u2444\0\u2470\0\130\0\u249c\0\u24c8"+
-    "\0\u24f4\0\u2520\0\u254c\0\u2578\0\130\0\130\0\u25a4\0\130"+
-    "\0\u25d0\0\u25fc\0\u2628\0\u2654\0\u2680\0\u26ac\0\u26d8\0\u2704"+
-    "\0\130\0\130\0\u2730\0\130\0\u275c\0\u2788\0\u27b4\0\u27e0"+
-    "\0\u280c\0\130\0\u2838\0\u2864\0\u2890\0\130\0\u28bc\0\u28e8"+
-    "\0\u2914\0\u2940\0\130\0\u296c\0\130\0\130\0\u2998\0\u29c4"+
-    "\0\130\0\u29f0\0\u2a1c\0\u2a48\0\130\0\130\0\u2a74\0\130"+
-    "\0\u2aa0\0\u2acc\0\130\0\u2af8\0\130\0\130\0\130\0\u2b24"+
-    "\0\u2b50\0\130\0\u2b7c\0\u2ba8\0\u2bd4\0\130\0\u2c00\0\u2c2c"+
-    "\0\u2c58\0\u2c84\0\130";
+    "\0\0\0\57\0\136\0\215\0\274\0\353\0\274\0\u011a"+
+    "\0\u0149\0\274\0\274\0\u0178\0\u01a7\0\u01d6\0\274\0\u0205"+
+    "\0\u0234\0\u0263\0\u0292\0\u02c1\0\u02f0\0\u031f\0\u034e\0\u037d"+
+    "\0\u03ac\0\u03db\0\u040a\0\u0439\0\274\0\274\0\u0468\0\u0497"+
+    "\0\u04c6\0\274\0\u04f5\0\274\0\u0524\0\u0553\0\u0582\0\274"+
+    "\0\u05b1\0\u05e0\0\u060f\0\u063e\0\u066d\0\u069c\0\u06cb\0\u06fa"+
+    "\0\u0729\0\u0758\0\u0787\0\u07b6\0\u07e5\0\u0814\0\u0843\0\u0872"+
+    "\0\u08a1\0\u08d0\0\u08ff\0\u092e\0\u095d\0\u098c\0\u09bb\0\u09ea"+
+    "\0\u0a19\0\u0a48\0\u0a77\0\u0aa6\0\u0ad5\0\274\0\274\0\u0b04"+
+    "\0\u0b33\0\u05b1\0\u0b62\0\u0b91\0\u0bc0\0\u0bef\0\u0c1e\0\u0c4d"+
+    "\0\u0c7c\0\u0cab\0\u0cda\0\u0d09\0\u0d38\0\u0d67\0\u0d96\0\u0dc5"+
+    "\0\u0df4\0\u0e23\0\u0e52\0\u0e81\0\u0eb0\0\u0edf\0\u0f0e\0\u0f3d"+
+    "\0\u0f6c\0\u0f9b\0\u0fca\0\u0ff9\0\u1028\0\u1057\0\u1086\0\u10b5"+
+    "\0\u10e4\0\u1113\0\u1142\0\274\0\u1171\0\274\0\u11a0\0\u11cf"+
+    "\0\u11fe\0\274\0\u122d\0\u125c\0\u128b\0\u12ba\0\u12e9\0\u1318"+
+    "\0\u1347\0\u1376\0\u13a5\0\u13d4\0\u1403\0\u1432\0\u1461\0\u1490"+
+    "\0\u14bf\0\u14ee\0\u151d\0\u154c\0\u157b\0\u15aa\0\u15d9\0\u1608"+
+    "\0\u1637\0\u1666\0\u1695\0\u16c4\0\u16f3\0\u1722\0\u1751\0\274"+
+    "\0\u1780\0\u17af\0\u17de\0\u180d\0\u183c\0\u186b\0\274\0\274"+
+    "\0\u189a\0\u18c9\0\u18f8\0\u1927\0\u1956\0\u1985\0\u19b4\0\u19e3"+
+    "\0\u1a12\0\u1a41\0\u1a70\0\u1a9f\0\u1ace\0\u1afd\0\u1b2c\0\u1b5b"+
+    "\0\u1b8a\0\u1bb9\0\u1be8\0\u1c17\0\u1c46\0\u1c75\0\u1ca4\0\u1cd3"+
+    "\0\u1d02\0\u1d31\0\u1d60\0\u1d8f\0\u1dbe\0\u1ded\0\u1e1c\0\u1e4b"+
+    "\0\u1e7a\0\u1ea9\0\274\0\u1ed8\0\u1f07\0\u1f36\0\u1f65\0\274"+
+    "\0\u1f94\0\u1fc3\0\u1ff2\0\u2021\0\274\0\u2050\0\u207f\0\u20ae"+
+    "\0\u20dd\0\u210c\0\u213b\0\u216a\0\u2199\0\u21c8\0\u21f7\0\u2226"+
+    "\0\u2255\0\u2284\0\u22b3\0\u22e2\0\u2311\0\u2340\0\u236f\0\u239e"+
+    "\0\274\0\u23cd\0\u23fc\0\274\0\u242b\0\274\0\u245a\0\u2489"+
+    "\0\u24b8\0\u24e7\0\u2516\0\274\0\u2545\0\274\0\274\0\u2574"+
+    "\0\274\0\u25a3\0\u25d2\0\274\0\274\0\u2601\0\274\0\u2630"+
+    "\0\274\0\u265f\0\274\0\u268e\0\u26bd\0\u26ec\0\u271b\0\274"+
+    "\0\u274a\0\u2779\0\274\0\u27a8\0\u27d7\0\u2806\0\u2835\0\u2864"+
+    "\0\u2893\0\274\0\274\0\u28c2\0\274\0\u28f1\0\u2920\0\u294f"+
+    "\0\u297e\0\u29ad\0\u29dc\0\u2a0b\0\u2a3a\0\274\0\274\0\u2a69"+
+    "\0\274\0\u2a98\0\u2ac7\0\u2af6\0\u2b25\0\u2b54\0\274\0\u2b83"+
+    "\0\u2bb2\0\u2be1\0\274\0\u2c10\0\u2c3f\0\u2c6e\0\u2c9d\0\274"+
+    "\0\u2ccc\0\274\0\274\0\u2cfb\0\u2d2a\0\274\0\u2d59\0\u2d88"+
+    "\0\u2db7\0\274\0\274\0\u2de6\0\274\0\u2e15\0\u2e44\0\274"+
+    "\0\u2e73\0\274\0\274\0\274\0\u2ea2\0\u2ed1\0\274\0\u2f00"+
+    "\0\u2f2f\0\u2f5e\0\274\0\u2f8d\0\u2fbc\0\u2feb\0\u301a\0\274";
 
   private static int [] zzUnpackRowMap() {
-    int [] result = new int[315];
+    int [] result = new int[320];
     int offset = 0;
     offset = zzUnpackRowMap(ZZ_ROWMAP_PACKED_0, offset, result);
     return result;
@@ -210,90 +215,91 @@ public class LexerPKM implements java_cup.runtime.Scanner {
   private static final int [] ZZ_TRANS = zzUnpacktrans();
 
   private static final String ZZ_TRANS_PACKED_0 =
-    "\1\3\2\4\1\0\1\4\1\5\1\6\1\7\1\3"+
-    "\1\10\1\11\1\3\1\12\1\13\1\14\1\3\1\15"+
-    "\1\3\1\16\1\17\1\20\2\3\1\21\1\22\2\3"+
-    "\1\23\1\24\2\3\1\25\1\26\1\27\2\3\1\30"+
-    "\1\31\1\3\1\32\2\3\1\33\1\34\6\35\1\36"+
-    "\45\35\55\0\2\4\1\0\1\4\47\0\2\37\1\0"+
-    "\2\37\1\40\46\37\6\0\1\41\6\0\1\42\3\0"+
-    "\6\42\42\0\1\43\56\0\1\44\46\0\1\45\1\0"+
-    "\1\13\52\0\1\46\1\47\4\0\1\50\1\51\1\52"+
-    "\1\53\1\54\4\0\1\55\1\56\1\0\1\57\2\0"+
-    "\1\60\1\61\44\0\1\62\56\0\1\63\4\0\1\64"+
-    "\46\0\1\65\55\0\1\66\51\0\1\67\46\0\1\70"+
-    "\60\0\1\71\60\0\1\72\35\0\1\73\47\0\1\74"+
-    "\10\0\1\75\46\0\1\76\56\0\1\77\50\0\1\100"+
-    "\26\0\6\35\1\0\45\35\6\0\1\101\53\0\1\102"+
-    "\62\0\1\103\3\0\6\103\36\0\1\104\3\0\1\43"+
-    "\53\0\1\105\61\0\1\106\1\107\1\110\5\0\1\111"+
-    "\1\112\1\0\1\113\2\0\1\114\1\115\22\0\1\116"+
-    "\3\0\1\47\57\0\1\117\14\0\1\120\53\0\1\121"+
-    "\55\0\1\122\46\0\1\123\56\0\1\124\46\0\1\125"+
-    "\65\0\1\126\47\0\1\127\41\0\1\130\14\0\1\131"+
-    "\32\0\1\132\3\0\1\133\47\0\1\134\21\0\1\135"+
-    "\43\0\1\136\60\0\1\137\55\0\1\140\1\141\35\0"+
-    "\1\142\66\0\1\143\50\0\1\144\53\0\1\145\56\0"+
-    "\1\146\37\0\1\147\64\0\1\150\65\0\1\151\44\0"+
-    "\1\152\44\0\1\153\55\0\1\154\26\0\1\155\62\0"+
-    "\1\156\3\0\6\156\42\0\1\157\74\0\1\160\55\0"+
-    "\1\161\46\0\1\162\51\0\1\163\65\0\1\164\47\0"+
-    "\1\165\41\0\1\166\14\0\1\167\32\0\1\170\3\0"+
-    "\1\171\43\0\1\172\61\0\1\173\70\0\1\174\46\0"+
-    "\1\175\1\0\1\176\54\0\1\177\42\0\1\200\63\0"+
-    "\1\201\53\0\1\202\51\0\1\203\45\0\1\204\51\0"+
-    "\1\205\7\0\1\206\67\0\1\207\26\0\1\210\77\0"+
-    "\1\211\30\0\1\212\55\0\1\213\64\0\1\214\56\0"+
-    "\1\215\54\0\1\216\33\0\1\217\56\0\1\220\57\0"+
-    "\1\221\47\0\1\222\64\0\1\223\54\0\1\224\55\0"+
-    "\1\225\54\0\1\226\53\0\1\227\44\0\1\230\35\0"+
-    "\1\231\3\0\6\231\36\0\1\232\3\0\1\157\73\0"+
-    "\1\233\54\0\1\234\42\0\1\235\63\0\1\236\51\0"+
-    "\1\237\45\0\1\240\51\0\1\241\7\0\1\242\67\0"+
-    "\1\243\26\0\1\244\77\0\1\245\16\0\1\246\3\0"+
-    "\1\172\70\0\1\247\45\0\1\250\65\0\1\251\57\0"+
-    "\1\252\50\0\1\253\50\0\1\254\61\0\1\255\36\0"+
-    "\1\256\70\0\1\257\46\0\1\260\60\0\1\261\36\0"+
-    "\1\262\61\0\1\263\53\0\1\264\62\0\1\265\43\0"+
-    "\1\266\61\0\1\267\44\0\1\270\47\0\1\271\61\0"+
-    "\1\272\55\0\1\273\66\0\1\274\36\0\1\275\71\0"+
-    "\1\276\33\0\1\277\47\0\1\300\64\0\1\301\32\0"+
-    "\1\302\3\0\6\302\42\0\1\303\100\0\1\304\50\0"+
-    "\1\305\50\0\1\306\44\0\1\307\70\0\1\310\46\0"+
-    "\1\311\60\0\1\312\36\0\1\313\61\0\1\314\53\0"+
-    "\1\315\62\0\1\316\26\0\1\317\65\0\1\320\51\0"+
-    "\1\321\66\0\1\322\40\0\1\323\45\0\1\324\61\0"+
-    "\1\325\32\0\1\326\67\0\1\327\64\0\1\330\41\0"+
-    "\1\331\65\0\1\332\45\0\1\333\55\0\1\334\53\0"+
-    "\1\335\32\0\1\336\12\0\1\337\53\0\1\3\100\0"+
-    "\1\340\33\0\1\341\54\0\1\342\64\0\1\343\42\0"+
-    "\1\344\67\0\1\345\35\0\1\346\75\0\1\347\23\0"+
-    "\1\350\3\0\6\350\35\0\1\350\4\0\1\303\63\0"+
-    "\1\351\46\0\1\352\60\0\1\353\46\0\1\354\64\0"+
-    "\1\355\42\0\1\356\64\0\1\357\45\0\1\360\55\0"+
-    "\1\361\53\0\1\362\46\0\1\363\50\0\1\317\2\0"+
-    "\1\350\73\0\1\364\53\0\1\365\32\0\1\366\71\0"+
-    "\1\367\53\0\1\370\44\0\1\371\64\0\1\372\52\0"+
-    "\1\373\57\0\1\374\31\0\1\375\52\0\1\376\75\0"+
-    "\1\377\37\0\1\u0100\63\0\1\u0101\43\0\1\u0102\47\0"+
-    "\1\u0103\67\0\1\u0104\53\0\1\u0105\55\0\1\u0106\52\0"+
-    "\1\u0107\57\0\1\u0108\31\0\1\u0109\53\0\1\u010a\71\0"+
-    "\1\u010b\26\0\1\u010c\104\0\1\u010d\53\0\1\u010e\32\0"+
-    "\1\u010f\65\0\1\u0110\55\0\1\u0111\35\0\1\u0112\65\0"+
-    "\1\u0113\64\0\1\u0114\51\0\1\u0115\46\0\1\u0116\62\0"+
-    "\1\u0117\53\0\1\u0118\44\0\1\u0119\55\0\1\u011a\36\0"+
-    "\1\u011b\76\0\1\u011c\30\0\1\u011d\53\0\1\u011e\67\0"+
-    "\1\u011f\44\0\1\u0120\45\0\1\u0121\104\0\1\u0122\24\0"+
-    "\1\u0123\63\0\1\u0124\42\0\1\u0125\53\0\1\u0126\60\0"+
-    "\1\u0127\46\0\1\u0128\70\0\1\u0129\47\0\1\u012a\41\0"+
-    "\1\u012b\61\0\1\u012c\61\0\1\u012d\46\0\1\u012e\45\0"+
-    "\1\u012f\57\0\1\u0130\62\0\1\u0131\37\0\1\u0132\40\0"+
-    "\1\u0133\116\0\1\u0134\27\0\1\u0135\47\0\1\u0136\72\0"+
-    "\1\u0137\50\0\1\u0138\56\0\1\u0139\55\0\1\u013a\32\0"+
-    "\1\u013b\34\0";
+    "\1\5\2\6\1\0\1\6\1\7\1\10\1\11\1\5"+
+    "\1\12\1\13\1\5\1\14\1\15\1\16\1\5\1\17"+
+    "\2\5\1\20\1\21\1\22\2\5\1\23\1\24\2\5"+
+    "\1\25\1\26\2\5\1\27\1\30\1\31\2\5\1\32"+
+    "\1\33\1\5\1\34\4\5\1\35\1\36\6\37\1\40"+
+    "\50\37\2\41\1\42\2\41\1\42\13\41\1\43\35\41"+
+    "\53\4\1\44\3\4\60\0\2\6\1\0\1\6\60\0"+
+    "\1\45\6\0\1\46\4\0\6\46\44\0\1\47\61\0"+
+    "\1\50\51\0\1\51\1\0\1\15\55\0\1\52\1\53"+
+    "\5\0\1\54\1\55\1\56\1\57\1\60\4\0\1\61"+
+    "\1\62\1\0\1\63\2\0\1\64\1\65\47\0\1\66"+
+    "\61\0\1\67\4\0\1\70\51\0\1\71\60\0\1\72"+
+    "\54\0\1\73\51\0\1\74\63\0\1\75\63\0\1\76"+
+    "\40\0\1\77\52\0\1\100\10\0\1\101\51\0\1\102"+
+    "\61\0\1\103\53\0\1\104\30\0\6\37\1\0\50\37"+
+    "\6\0\1\105\50\0\2\41\1\0\2\41\1\0\13\41"+
+    "\1\0\35\41\52\0\1\106\12\0\1\107\65\0\1\110"+
+    "\4\0\6\110\40\0\1\111\3\0\1\47\56\0\1\112"+
+    "\65\0\1\113\1\114\1\115\5\0\1\116\1\117\1\0"+
+    "\1\120\2\0\1\121\1\122\24\0\1\123\3\0\1\53"+
+    "\63\0\1\124\14\0\1\125\56\0\1\126\60\0\1\127"+
+    "\51\0\1\130\61\0\1\131\51\0\1\132\70\0\1\133"+
+    "\52\0\1\134\44\0\1\135\14\0\1\136\35\0\1\137"+
+    "\3\0\1\140\52\0\1\141\21\0\1\142\46\0\1\143"+
+    "\63\0\1\144\60\0\1\145\1\146\40\0\1\147\71\0"+
+    "\1\150\53\0\1\151\56\0\1\152\61\0\1\153\42\0"+
+    "\1\154\67\0\1\155\70\0\1\156\47\0\1\157\47\0"+
+    "\1\160\60\0\1\161\30\0\1\162\65\0\1\163\4\0"+
+    "\6\163\44\0\1\164\100\0\1\165\60\0\1\166\51\0"+
+    "\1\167\54\0\1\170\70\0\1\171\52\0\1\172\44\0"+
+    "\1\173\14\0\1\174\35\0\1\175\3\0\1\176\45\0"+
+    "\1\177\65\0\1\200\73\0\1\201\51\0\1\202\1\0"+
+    "\1\203\57\0\1\204\45\0\1\205\66\0\1\206\56\0"+
+    "\1\207\54\0\1\210\50\0\1\211\54\0\1\212\7\0"+
+    "\1\213\72\0\1\214\31\0\1\215\102\0\1\216\33\0"+
+    "\1\217\60\0\1\220\67\0\1\221\61\0\1\222\57\0"+
+    "\1\223\36\0\1\224\61\0\1\225\62\0\1\226\52\0"+
+    "\1\227\67\0\1\230\57\0\1\231\60\0\1\232\57\0"+
+    "\1\233\56\0\1\234\47\0\1\235\37\0\1\236\4\0"+
+    "\6\236\40\0\1\237\3\0\1\164\77\0\1\240\57\0"+
+    "\1\241\45\0\1\242\66\0\1\243\54\0\1\244\50\0"+
+    "\1\245\54\0\1\246\7\0\1\247\72\0\1\250\31\0"+
+    "\1\251\102\0\1\252\20\0\1\253\3\0\1\177\74\0"+
+    "\1\254\50\0\1\255\70\0\1\256\62\0\1\257\53\0"+
+    "\1\260\53\0\1\261\64\0\1\262\41\0\1\263\73\0"+
+    "\1\264\51\0\1\265\63\0\1\266\41\0\1\267\64\0"+
+    "\1\270\56\0\1\271\65\0\1\272\46\0\1\273\64\0"+
+    "\1\274\47\0\1\275\52\0\1\276\64\0\1\277\60\0"+
+    "\1\300\71\0\1\301\41\0\1\302\76\0\1\303\34\0"+
+    "\1\304\52\0\1\305\67\0\1\306\34\0\1\307\4\0"+
+    "\6\307\44\0\1\310\104\0\1\311\53\0\1\312\53\0"+
+    "\1\313\47\0\1\314\73\0\1\315\51\0\1\316\63\0"+
+    "\1\317\41\0\1\320\64\0\1\321\56\0\1\322\65\0"+
+    "\1\323\30\0\1\324\71\0\1\325\54\0\1\326\71\0"+
+    "\1\327\43\0\1\330\47\0\1\331\65\0\1\332\34\0"+
+    "\1\333\72\0\1\334\70\0\1\335\43\0\1\336\71\0"+
+    "\1\337\50\0\1\340\60\0\1\341\56\0\1\342\34\0"+
+    "\1\343\12\0\1\344\56\0\1\5\104\0\1\345\36\0"+
+    "\1\346\57\0\1\347\67\0\1\350\45\0\1\351\72\0"+
+    "\1\352\40\0\1\353\100\0\1\354\25\0\1\355\4\0"+
+    "\6\355\37\0\1\355\4\0\1\310\67\0\1\356\50\0"+
+    "\1\357\64\0\1\360\50\0\1\361\70\0\1\362\44\0"+
+    "\1\363\70\0\1\364\50\0\1\365\60\0\1\366\56\0"+
+    "\1\367\50\0\1\370\53\0\1\324\2\0\1\355\77\0"+
+    "\1\371\56\0\1\372\34\0\1\373\75\0\1\374\56\0"+
+    "\1\375\47\0\1\376\67\0\1\377\55\0\1\u0100\62\0"+
+    "\1\u0101\33\0\1\u0102\55\0\1\u0103\101\0\1\u0104\42\0"+
+    "\1\u0105\66\0\1\u0106\46\0\1\u0107\52\0\1\u0108\72\0"+
+    "\1\u0109\56\0\1\u010a\60\0\1\u010b\55\0\1\u010c\62\0"+
+    "\1\u010d\33\0\1\u010e\56\0\1\u010f\75\0\1\u0110\30\0"+
+    "\1\u0111\110\0\1\u0112\56\0\1\u0113\35\0\1\u0114\70\0"+
+    "\1\u0115\60\0\1\u0116\37\0\1\u0117\71\0\1\u0118\67\0"+
+    "\1\u0119\54\0\1\u011a\51\0\1\u011b\65\0\1\u011c\56\0"+
+    "\1\u011d\47\0\1\u011e\60\0\1\u011f\40\0\1\u0120\102\0"+
+    "\1\u0121\32\0\1\u0122\56\0\1\u0123\73\0\1\u0124\47\0"+
+    "\1\u0125\47\0\1\u0126\110\0\1\u0127\27\0\1\u0128\66\0"+
+    "\1\u0129\44\0\1\u012a\56\0\1\u012b\64\0\1\u012c\50\0"+
+    "\1\u012d\74\0\1\u012e\52\0\1\u012f\43\0\1\u0130\65\0"+
+    "\1\u0131\64\0\1\u0132\51\0\1\u0133\47\0\1\u0134\63\0"+
+    "\1\u0135\65\0\1\u0136\41\0\1\u0137\43\0\1\u0138\122\0"+
+    "\1\u0139\32\0\1\u013a\51\0\1\u013b\76\0\1\u013c\53\0"+
+    "\1\u013d\61\0\1\u013e\60\0\1\u013f\34\0\1\u0140\37\0";
 
   private static int [] zzUnpacktrans() {
-    int [] result = new int[11440];
+    int [] result = new int[12361];
     int offset = 0;
     offset = zzUnpacktrans(ZZ_TRANS_PACKED_0, offset, result);
     return result;
@@ -336,21 +342,21 @@ public class LexerPKM implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ATTRIBUTE = zzUnpackAttribute();
 
   private static final String ZZ_ATTRIBUTE_PACKED_0 =
-    "\2\0\1\11\4\1\2\11\3\1\1\11\15\1\2\11"+
-    "\2\1\1\0\1\11\3\0\1\11\35\0\1\11\2\0"+
-    "\1\1\41\0\1\11\1\0\1\11\3\0\1\11\35\0"+
-    "\1\11\6\0\2\11\42\0\1\11\4\0\1\11\4\0"+
-    "\1\11\23\0\1\11\2\0\1\11\1\0\1\11\5\0"+
-    "\1\11\1\0\2\11\1\0\1\11\2\0\2\11\1\0"+
-    "\1\11\1\0\1\11\1\0\1\11\4\0\1\11\2\0"+
-    "\1\11\6\0\2\11\1\0\1\11\10\0\2\11\1\0"+
-    "\1\11\5\0\1\11\3\0\1\11\4\0\1\11\1\0"+
-    "\2\11\2\0\1\11\3\0\2\11\1\0\1\11\2\0"+
-    "\1\11\1\0\3\11\2\0\1\11\3\0\1\11\4\0"+
-    "\1\11";
+    "\4\0\1\11\1\1\1\11\2\1\2\11\3\1\1\11"+
+    "\15\1\2\11\3\1\1\11\1\1\1\11\3\0\1\11"+
+    "\35\0\2\11\2\0\1\1\41\0\1\11\1\0\1\11"+
+    "\3\0\1\11\35\0\1\11\6\0\2\11\42\0\1\11"+
+    "\4\0\1\11\4\0\1\11\23\0\1\11\2\0\1\11"+
+    "\1\0\1\11\5\0\1\11\1\0\2\11\1\0\1\11"+
+    "\2\0\2\11\1\0\1\11\1\0\1\11\1\0\1\11"+
+    "\4\0\1\11\2\0\1\11\6\0\2\11\1\0\1\11"+
+    "\10\0\2\11\1\0\1\11\5\0\1\11\3\0\1\11"+
+    "\4\0\1\11\1\0\2\11\2\0\1\11\3\0\2\11"+
+    "\1\0\1\11\2\0\1\11\1\0\3\11\2\0\1\11"+
+    "\3\0\1\11\4\0\1\11";
 
   private static int [] zzUnpackAttribute() {
-    int [] result = new int[315];
+    int [] result = new int[320];
     int offset = 0;
     offset = zzUnpackAttribute(ZZ_ATTRIBUTE_PACKED_0, offset, result);
     return result;
@@ -429,12 +435,47 @@ public class LexerPKM implements java_cup.runtime.Scanner {
   /* user code: */
     public static ArrayList<String[]> errores = new ArrayList<>();
 
+    /* Buffer para construir el valor de la cadena actual */
+    private StringBuilder cadenaActual = new StringBuilder();
+
     private Symbol symbol(int type) {
         return new Symbol(type, yyline + 1, yycolumn + 1);
     }
-
     private Symbol symbol(int type, Object value) {
         return new Symbol(type, yyline + 1, yycolumn + 1, value);
+    }
+
+    /* Convierte el contenido de @[...] a Unicode */
+    private String convertirEmoji(String contenido) {
+        if (contenido.equals(":smile:"))   return "\uD83D\uDE00"; // 😀
+        if (contenido.equals(":sad:"))     return "\uD83E\uDD72"; // 🥲
+        if (contenido.equals(":serious:")) return "\uD83D\uDE10"; // 😐
+        if (contenido.equals(":heart:"))   return "\u2764\uFE0F"; // ❤️
+        if (contenido.equals(":star:"))    return "\u2B50";        // ⭐
+        if (contenido.equals(":cat:")  ||
+            contenido.equals(":^^:"))      return "\uD83D\uDE3A"; // 😺
+
+        // :) :)) :)))))
+        if (contenido.matches(":\\)+"))    return "\uD83D\uDE00";
+        // :( :((
+        if (contenido.matches(":\\(+"))    return "\uD83E\uDD72";
+        // :| :||
+        if (contenido.matches(":\\|+"))    return "\uD83D\uDE10";
+        // <3, <<3, :<3, :<<<<33333:
+        if (contenido.matches("<+3+"))     return "\u2764\uFE0F";
+        if (contenido.matches(":<+3+:?")) return "\u2764\uFE0F";
+
+        // :star:N: o :star:N
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile(":star:(\\d+):?").matcher(contenido);
+        if (m.matches()) {
+            int n = Math.min(Integer.parseInt(m.group(1)), 50);
+            StringBuilder sb = new StringBuilder();
+            for (int k = 0; k < n; k++) sb.append("\u2B50");
+            return sb.toString();
+        }
+
+        return null; // no reconocido
     }
 
 
@@ -861,11 +902,20 @@ public class LexerPKM implements java_cup.runtime.Scanner {
             case YYINITIAL: {
               return symbol(symPKM.EOF);
             }  // fall though
-            case 316: break;
+            case 321: break;
             case META: {
               return symbol(symPKM.EOF);
             }  // fall though
-            case 317: break;
+            case 322: break;
+            case CADENA_STATE: {
+              yybegin(YYINITIAL);
+                     return symbol(symPKM.CADENA, cadenaActual.toString());
+            }  // fall though
+            case 323: break;
+            case EMOJI_STATE: {
+              yybegin(YYINITIAL); return symbol(symPKM.EOF);
+            }  // fall though
+            case 324: break;
             default:
           { return new java_cup.runtime.Symbol(symPKM.EOF); }
         }
@@ -876,293 +926,314 @@ public class LexerPKM implements java_cup.runtime.Scanner {
             { /* ignorar */
             }
           // fall through
-          case 59: break;
-          case 2:
-            { return symbol(symPKM.COMA);
-            }
-          // fall through
-          case 60: break;
-          case 3:
-            { return symbol(symPKM.GUION);
-            }
-          // fall through
           case 61: break;
-          case 4:
-            { return symbol(symPKM.SLASH);
+          case 2:
+            { cadenaActual = new StringBuilder();
+                     yybegin(CADENA_STATE);
             }
           // fall through
           case 62: break;
-          case 5:
-            { return symbol(symPKM.NUMERO, Double.parseDouble(yytext()));
+          case 3:
+            { return symbol(symPKM.COMA);
             }
           // fall through
           case 63: break;
-          case 6:
-            { return symbol(symPKM.GT);
+          case 4:
+            { return symbol(symPKM.GUION);
             }
           // fall through
           case 64: break;
-          case 7:
-            { return symbol(symPKM.LLAVE_ABRE);
+          case 5:
+            { return symbol(symPKM.SLASH);
             }
           // fall through
           case 65: break;
-          case 8:
-            { return symbol(symPKM.LLAVE_CIERRA);
+          case 6:
+            { return symbol(symPKM.NUMERO, Double.parseDouble(yytext()));
             }
           // fall through
           case 66: break;
-          case 9:
-            { /* ignorar contenido de metadatos */
+          case 7:
+            { return symbol(symPKM.GT);
             }
           // fall through
           case 67: break;
-          case 10:
-            { /* ignorar # suelto */
+          case 8:
+            { return symbol(symPKM.LLAVE_ABRE);
             }
           // fall through
           case 68: break;
-          case 11:
-            { String raw = yytext();
-                            return symbol(symPKM.CADENA, raw.substring(1, raw.length()-1));
+          case 9:
+            { return symbol(symPKM.LLAVE_CIERRA);
             }
           // fall through
           case 69: break;
-          case 12:
-            { return symbol(symPKM.SLASH_GT);
+          case 10:
+            { cadenaActual.append(yytext());
             }
           // fall through
           case 70: break;
-          case 13:
-            { yybegin(META);
+          case 11:
+            { yybegin(YYINITIAL);
+                     return symbol(symPKM.CADENA, cadenaActual.toString());
             }
           // fall through
           case 71: break;
-          case 14:
-            { return symbol(symPKM.COLOR, "RED");
+          case 12:
+            { /* yytext() es el contenido + "]", quitamos el ] final */
+                     String contenido = yytext();
+                     contenido = contenido.substring(0, contenido.length() - 1);
+                     String emoji = convertirEmoji(contenido);
+                     if (emoji != null) {
+                         cadenaActual.append(emoji);
+                     } else {
+                         /* No reconocido — agregar la notacion original */
+                         cadenaActual.append("@[").append(contenido).append("]");
+                     }
+                     yybegin(CADENA_STATE);
             }
           // fall through
           case 72: break;
-          case 15:
-            { return symbol(symPKM.COLOR, "SKY");
+          case 13:
+            { return symbol(symPKM.SLASH_GT);
             }
           // fall through
           case 73: break;
-          case 16:
-            { yybegin(YYINITIAL);
+          case 14:
+            { yybegin(EMOJI_STATE);
             }
           // fall through
           case 74: break;
-          case 17:
-            { return symbol(symPKM.COLOR, "BLUE");
+          case 15:
+            { yybegin(META);
             }
           // fall through
           case 75: break;
-          case 18:
-            { return symbol(symPKM.BORDER_TYPE, "LINE");
+          case 16:
+            { return symbol(symPKM.COLOR, "RED");
             }
           // fall through
           case 76: break;
-          case 19:
-            { return symbol(symPKM.FONT_VAL, "MONO");
+          case 17:
+            { return symbol(symPKM.COLOR, "SKY");
             }
           // fall through
           case 77: break;
-          case 20:
-            { return symbol(symPKM.COLOR, "BLACK");
+          case 18:
+            { yybegin(YYINITIAL);
             }
           // fall through
           case 78: break;
-          case 21:
-            { return symbol(symPKM.COLOR, "GREEN");
+          case 19:
+            { return symbol(symPKM.COLOR, "BLUE");
             }
           // fall through
           case 79: break;
-          case 22:
-            { return symbol(symPKM.COLOR, "WHITE");
+          case 20:
+            { return symbol(symPKM.BORDER_TYPE, "LINE");
             }
           // fall through
           case 80: break;
-          case 23:
-            { return symbol(symPKM.TAG_DROP_OPEN);
+          case 21:
+            { return symbol(symPKM.FONT_VAL, "MONO");
             }
           // fall through
           case 81: break;
-          case 24:
-            { return symbol(symPKM.TAG_LINE_OPEN);
+          case 22:
+            { return symbol(symPKM.COLOR, "BLACK");
             }
           // fall through
           case 82: break;
-          case 25:
-            { return symbol(symPKM.TAG_OPEN_OPEN);
+          case 23:
+            { return symbol(symPKM.COLOR, "GREEN");
             }
           // fall through
           case 83: break;
-          case 26:
-            { return symbol(symPKM.TAG_TEXT_OPEN);
+          case 24:
+            { return symbol(symPKM.COLOR, "WHITE");
             }
           // fall through
           case 84: break;
-          case 27:
-            { return symbol(symPKM.BORDER_TYPE, "DOTTED");
+          case 25:
+            { return symbol(symPKM.TAG_DROP_OPEN);
             }
           // fall through
           case 85: break;
-          case 28:
-            { return symbol(symPKM.BORDER_TYPE, "DOUBLE");
+          case 26:
+            { return symbol(symPKM.TAG_LINE_OPEN);
             }
           // fall through
           case 86: break;
-          case 29:
-            { return symbol(symPKM.COLOR, "PURPLE");
+          case 27:
+            { return symbol(symPKM.TAG_OPEN_OPEN);
             }
           // fall through
           case 87: break;
-          case 30:
-            { return symbol(symPKM.COLOR, "YELLOW");
+          case 28:
+            { return symbol(symPKM.TAG_TEXT_OPEN);
             }
           // fall through
           case 88: break;
-          case 31:
-            { return symbol(symPKM.COLOR, yytext());
+          case 29:
+            { return symbol(symPKM.BORDER_TYPE, "DOTTED");
             }
           // fall through
           case 89: break;
-          case 32:
-            { return symbol(symPKM.TAG_DROP_CLOSE);
+          case 30:
+            { return symbol(symPKM.BORDER_TYPE, "DOUBLE");
             }
           // fall through
           case 90: break;
-          case 33:
-            { return symbol(symPKM.TAG_LINE_CLOSE);
+          case 31:
+            { return symbol(symPKM.COLOR, "PURPLE");
             }
           // fall through
           case 91: break;
-          case 34:
-            { return symbol(symPKM.TAG_OPEN_CLOSE);
+          case 32:
+            { return symbol(symPKM.COLOR, "YELLOW");
             }
           // fall through
           case 92: break;
-          case 35:
-            { return symbol(symPKM.TAG_TEXT_CLOSE);
+          case 33:
+            { return symbol(symPKM.COLOR, yytext());
             }
           // fall through
           case 93: break;
-          case 36:
-            { return symbol(symPKM.STYLE_COLOR);
+          case 34:
+            { return symbol(symPKM.TAG_DROP_CLOSE);
             }
           // fall through
           case 94: break;
-          case 37:
-            { return symbol(symPKM.TAG_STYLE_OPEN);
+          case 35:
+            { return symbol(symPKM.TAG_LINE_CLOSE);
             }
           // fall through
           case 95: break;
-          case 38:
-            { return symbol(symPKM.TAG_TABLE_OPEN);
+          case 36:
+            { return symbol(symPKM.TAG_OPEN_CLOSE);
             }
           // fall through
           case 96: break;
-          case 39:
-            { return symbol(symPKM.FONT_VAL, "CURSIVE");
+          case 37:
+            { return symbol(symPKM.TAG_TEXT_CLOSE);
             }
           // fall through
           case 97: break;
-          case 40:
-            { return symbol(symPKM.TAG_STYLE_CLOSE);
+          case 38:
+            { return symbol(symPKM.STYLE_COLOR);
             }
           // fall through
           case 98: break;
-          case 41:
-            { return symbol(symPKM.TAG_TABLE_CLOSE);
+          case 39:
+            { return symbol(symPKM.TAG_STYLE_OPEN);
             }
           // fall through
           case 99: break;
-          case 42:
-            { return symbol(symPKM.STYLE_BORDER);
+          case 40:
+            { return symbol(symPKM.TAG_TABLE_OPEN);
             }
           // fall through
           case 100: break;
-          case 43:
-            { return symbol(symPKM.TAG_SELECT_OPEN);
+          case 41:
+            { return symbol(symPKM.FONT_VAL, "CURSIVE");
             }
           // fall through
           case 101: break;
-          case 44:
-            { return symbol(symPKM.ORIENTATION, "VERTICAL");
+          case 42:
+            { return symbol(symPKM.TAG_STYLE_CLOSE);
             }
           // fall through
           case 102: break;
-          case 45:
-            { return symbol(symPKM.TAG_SELECT_CLOSE);
+          case 43:
+            { return symbol(symPKM.TAG_TABLE_CLOSE);
             }
           // fall through
           case 103: break;
-          case 46:
-            { return symbol(symPKM.TAG_CONTENT_OPEN);
+          case 44:
+            { return symbol(symPKM.STYLE_BORDER);
             }
           // fall through
           case 104: break;
-          case 47:
-            { return symbol(symPKM.TAG_ELEMENT_OPEN);
+          case 45:
+            { return symbol(symPKM.TAG_SELECT_OPEN);
             }
           // fall through
           case 105: break;
-          case 48:
-            { return symbol(symPKM.TAG_SECTION_OPEN);
+          case 46:
+            { return symbol(symPKM.ORIENTATION, "VERTICAL");
             }
           // fall through
           case 106: break;
-          case 49:
-            { return symbol(symPKM.TAG_CONTENT_CLOSE);
+          case 47:
+            { return symbol(symPKM.TAG_SELECT_CLOSE);
             }
           // fall through
           case 107: break;
-          case 50:
-            { return symbol(symPKM.TAG_ELEMENT_CLOSE);
+          case 48:
+            { return symbol(symPKM.TAG_CONTENT_OPEN);
             }
           // fall through
           case 108: break;
-          case 51:
-            { return symbol(symPKM.TAG_SECTION_CLOSE);
+          case 49:
+            { return symbol(symPKM.TAG_ELEMENT_OPEN);
             }
           // fall through
           case 109: break;
-          case 52:
-            { return symbol(symPKM.TAG_MULTIPLE_OPEN);
+          case 50:
+            { return symbol(symPKM.TAG_SECTION_OPEN);
             }
           // fall through
           case 110: break;
-          case 53:
-            { return symbol(symPKM.ORIENTATION, "HORIZONTAL");
+          case 51:
+            { return symbol(symPKM.TAG_CONTENT_CLOSE);
             }
           // fall through
           case 111: break;
-          case 54:
-            { return symbol(symPKM.FONT_VAL, "SANS_SERIF");
+          case 52:
+            { return symbol(symPKM.TAG_ELEMENT_CLOSE);
             }
           // fall through
           case 112: break;
-          case 55:
-            { return symbol(symPKM.TAG_MULTIPLE_CLOSE);
+          case 53:
+            { return symbol(symPKM.TAG_SECTION_CLOSE);
             }
           // fall through
           case 113: break;
-          case 56:
-            { return symbol(symPKM.STYLE_SIZE);
+          case 54:
+            { return symbol(symPKM.TAG_MULTIPLE_OPEN);
             }
           // fall through
           case 114: break;
-          case 57:
-            { return symbol(symPKM.STYLE_FONT);
+          case 55:
+            { return symbol(symPKM.ORIENTATION, "HORIZONTAL");
             }
           // fall through
           case 115: break;
-          case 58:
-            { return symbol(symPKM.STYLE_BG);
+          case 56:
+            { return symbol(symPKM.FONT_VAL, "SANS_SERIF");
             }
           // fall through
           case 116: break;
+          case 57:
+            { return symbol(symPKM.TAG_MULTIPLE_CLOSE);
+            }
+          // fall through
+          case 117: break;
+          case 58:
+            { return symbol(symPKM.STYLE_SIZE);
+            }
+          // fall through
+          case 118: break;
+          case 59:
+            { return symbol(symPKM.STYLE_FONT);
+            }
+          // fall through
+          case 119: break;
+          case 60:
+            { return symbol(symPKM.STYLE_BG);
+            }
+          // fall through
+          case 120: break;
           default:
             zzScanError(ZZ_NO_MATCH);
         }
