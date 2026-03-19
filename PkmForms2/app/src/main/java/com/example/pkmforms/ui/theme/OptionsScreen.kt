@@ -52,7 +52,7 @@ fun OptionsScreen(
 
     var ipActual by remember { mutableStateOf(ApiConfig.getIp(context)) }
 
-    // Launcher para abrir .form
+    // Launcher para abrir .form (codigo fuente)
     val abrirFormLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -68,7 +68,7 @@ fun OptionsScreen(
         }
     }
 
-    // Launcher para abrir .pkm local
+    // Launcher para abrir .pkm local (formulario guardado para contestar)
     val abrirPkmLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -168,7 +168,7 @@ fun OptionsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Boton configurar servidor colocar la ip de la computadora
+        // Boton configurar servidor
         OptionButton(
             label   = "Server config",
             onClick = { mostrarDialogoConfig = true }
@@ -264,6 +264,7 @@ fun OptionsScreen(
         }
     }
 }
+
 
 private fun guardarArchivoLocal(
     context: Context,

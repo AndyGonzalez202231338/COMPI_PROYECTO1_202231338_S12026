@@ -285,7 +285,35 @@ pregunta_drop ::= TAG_DROP_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
                 ;
 
 /* ---- PREGUNTA SELECCION ---- */
-pregunta_select ::= TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA
+pregunta_select ::= TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                      LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c SLASH_GT
+                    {:
+                        PkmSelectNode n = new PkmSelectNode();
+                        n.width=w.intValue(); n.height=h.intValue();
+                        n.label=lbl; n.opciones=ops; n.correct=c.intValue();
+                        RESULT = n;
+                    :}
+                  | TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                      LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c GT
+                      estilo:s
+                    TAG_SELECT_CLOSE
+                    {:
+                        PkmSelectNode n = new PkmSelectNode();
+                        n.width=w.intValue(); n.height=h.intValue();
+                        n.label=lbl; n.opciones=ops; n.correct=c.intValue(); n.style=s;
+                        RESULT = n;
+                    :}
+                  | TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA CADENA:lbl COMA
+                      LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c GT
+                    TAG_SELECT_CLOSE
+                    {:
+                        PkmSelectNode n = new PkmSelectNode();
+                        n.width=w.intValue(); n.height=h.intValue();
+                        n.label=lbl; n.opciones=ops; n.correct=c.intValue();
+                        RESULT = n;
+                    :}
+                  /* Compatibilidad con archivos viejos sin label */
+                  | TAG_SELECT_OPEN NUMERO:w COMA NUMERO:h COMA
                       LLAVE_ABRE lista_opciones:ops LLAVE_CIERRA COMA numero_negativo:c SLASH_GT
                     {:
                         PkmSelectNode n = new PkmSelectNode();

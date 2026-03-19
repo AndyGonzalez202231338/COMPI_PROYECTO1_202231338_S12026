@@ -20,7 +20,7 @@ Total de Preguntas: 6
         <border,2,LINE,color=#CCCCCC/>
     </style>
     <content>
-        <text=380,40,"Bienvenido al formulario de prueba 😀">
+        <text=380,40,"Bienvenido al formulario de prueba ">
             <style>
                 <color=#FFFFFF/>
                 <background color=#1A237E/>
@@ -36,7 +36,7 @@ Total de Preguntas: 6
                 <text size=14>
             </style>
         </open>
-        <open=380,80,"Describe tu experiencia con la programacion 😐">
+        <open=380,80,"Describe tu experiencia con la programacion ">
             <style>
                 <color=#1A237E/>
                 <background color=#E3F2FD/>
@@ -65,7 +65,7 @@ Total de Preguntas: 6
                 <text size=14>
             </style>
         </text>
-        <text=380,50,"Color HSL fondo rojo ❤️">
+        <text=380,50,"Color HSL fondo rojo ">
             <style>
                 <color=WHITE/>
                 <background color=RED/>
@@ -83,6 +83,6 @@ Total de Preguntas: 6
         <text size=14>
     </style>
     <content>
-        <open=380,80,"Comentario final ❤️"/>
+        <open=380,80,"Comentario final "/>
     </content>
 </section>

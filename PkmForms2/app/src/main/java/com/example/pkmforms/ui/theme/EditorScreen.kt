@@ -15,6 +15,7 @@ import com.example.pkmforms.ui.theme.components.CodeEditor
 import com.example.pkmforms.ui.theme.components.EditorActionBar
 import com.example.pkmforms.ui.theme.components.ErrorList
 import com.example.pkmforms.ui.theme.components.TopBar
+import kotlinx.coroutines.launch
 
 @Composable
 fun EditorScreen(
@@ -24,18 +25,15 @@ fun EditorScreen(
     onErrorsDismiss    : () -> Unit,
     onErrorsFound      : (List<ErrorToken>) -> Unit,
     onNavigateOptions  : () -> Unit,
-    onNavigateFormView : (List<FormElement>) -> Unit
+    onNavigateFormView : (List<FormElement>) -> Unit,
+    onFinish           : () -> Unit = {}
 ) {
-    val parser = remember { PkmParser() }
+    val scope = rememberCoroutineScope()
 
-    // TextFieldValue unico que vive en EditorScreen.
-    // CodeEditor lo recibe completo y lo devuelve completo,
-    // asi que el cursor siempre esta actualizado aqui.
     var textFieldValue by remember {
         mutableStateOf(TextFieldValue(text = codeText))
     }
 
-    // Sincroniza si codeText cambia desde afuera (ej: abrir archivo)
     LaunchedEffect(codeText) {
         if (codeText != textFieldValue.text) {
             textFieldValue = TextFieldValue(text = codeText)
@@ -62,7 +60,6 @@ fun EditorScreen(
         CodeEditor(
             value         = textFieldValue,
             onValueChange = { newValue ->
-                // newValue ya trae texto Y posicion del cursor actualizada
                 textFieldValue = newValue
                 onCodeChange(newValue.text)
             },
@@ -75,21 +72,8 @@ fun EditorScreen(
         EditorActionBar(
             onReplace = { /* TODO */ },
             onAdd     = { /* TODO */ },
-            onFinish  = {
-                val result = parser.parse(textFieldValue.text)
-                if (result.errors.isEmpty()) {
-                    onNavigateFormView(result.elements)
-                } else {
-                    onErrorsFound(
-                        result.errors.sortedWith(
-                            compareBy({ it.line }, { it.column })
-                        )
-                    )
-                }
-            },
+            onFinish  = { onFinish() },
             onColorInsert = { colorString ->
-                // cursor siempre correcto porque CodeEditor
-                // devuelve el TextFieldValue completo en cada cambio
                 val cursor  = textFieldValue.selection.start
                 val before  = textFieldValue.text.substring(0, cursor)
                 val after   = textFieldValue.text.substring(cursor)

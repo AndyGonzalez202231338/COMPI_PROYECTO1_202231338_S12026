@@ -806,8 +806,14 @@ lista_correctos_items ::= lista_correctos_items:items COMA expresion:v
 
 fuente_opciones ::= lista_opciones:v
                     {: RESULT = v; :}
-                  | WHO_IS_THAT_POKEMON PAREN_ABRE NUMBER_CONST COMA NUMERO COMA NUMERO PAREN_CIERRA
-                    {: RESULT = new ArrayList(); :}
+                  | WHO_IS_THAT_POKEMON PAREN_ABRE NUMBER_CONST COMA NUMERO:min COMA NUMERO:max PAREN_CIERRA
+                    {:
+                        ArrayList lista = new ArrayList();
+                        lista.add("__pokemon__");
+                        lista.add(min);
+                        lista.add(max);
+                        RESULT = lista;
+                    :}
                   ;
 
 /* =================    ELEMENTOS  =================*/
@@ -1153,6 +1159,8 @@ attr_pregunta_select_lista ::= attr_pregunta_select_lista:node COMA attr_pregunt
                                {:
                                    Object[] a = (Object[]) attr;
                                    String clave = (String) a[0];
+                                   if (clave.equals("label") && a[1] != null)
+                                       node.label  = (String) a[1];
                                    if (clave.equals("width") && a[1] != null)
                                        node.width  = a[1];
                                    if (clave.equals("height") && a[1] != null)
@@ -1169,6 +1177,8 @@ attr_pregunta_select_lista ::= attr_pregunta_select_lista:node COMA attr_pregunt
                                    SelectQuestionNode node = new SelectQuestionNode();
                                    Object[] a = (Object[]) attr;
                                    String clave = (String) a[0];
+                                   if (clave.equals("label") && a[1] != null)
+                                       node.label  = (String) a[1];
                                    if (clave.equals("width") && a[1] != null)
                                        node.width  = a[1];
                                    if (clave.equals("height") && a[1] != null)
@@ -1182,11 +1192,13 @@ attr_pregunta_select_lista ::= attr_pregunta_select_lista:node COMA attr_pregunt
                                {: SelectQuestionNode node = new SelectQuestionNode(); node.style = s; RESULT = node; :}
                              ;
 
-attr_pregunta_select ::= WIDTH   DOS_PUNTOS expresion:v
+attr_pregunta_select ::= LABEL   DOS_PUNTOS CADENA:v
+                         {: RESULT = new Object[]{"label",   v}; :}
+                       | WIDTH   DOS_PUNTOS expresion:v
                          {: RESULT = new Object[]{"width",   v}; :}
                        | HEIGHT  DOS_PUNTOS expresion:v
                          {: RESULT = new Object[]{"height",  v}; :}
-                       | OPTIONS DOS_PUNTOS lista_opciones:v
+                       | OPTIONS DOS_PUNTOS fuente_opciones:v
                          {: RESULT = new Object[]{"options", v}; :}
                        | OPTIONS DOS_PUNTOS error
                          {: RESULT = new Object[]{"options", new ArrayList()}; :}
@@ -1204,6 +1216,8 @@ attr_pregunta_multiple_lista ::= attr_pregunta_multiple_lista:node COMA attr_pre
                                  {:
                                      Object[] a = (Object[]) attr;
                                      String clave = (String) a[0];
+                                     if (clave.equals("label") && a[1] != null)
+                                         node.label  = (String) a[1];
                                      if (clave.equals("width") && a[1] != null)
                                          node.width  = a[1];
                                      if (clave.equals("height") && a[1] != null)
@@ -1219,6 +1233,8 @@ attr_pregunta_multiple_lista ::= attr_pregunta_multiple_lista:node COMA attr_pre
                                      MultipleQuestionNode node = new MultipleQuestionNode();
                                      Object[] a = (Object[]) attr;
                                      String clave = (String) a[0];
+                                     if (clave.equals("label") && a[1] != null)
+                                         node.label  = (String) a[1];
                                      if (clave.equals("width") && a[1] != null)
                                          node.width  = a[1];
                                      if (clave.equals("height") && a[1] != null)
@@ -1231,7 +1247,9 @@ attr_pregunta_multiple_lista ::= attr_pregunta_multiple_lista:node COMA attr_pre
   				{: MultipleQuestionNode node = new MultipleQuestionNode(); node.style = s; RESULT = node; :}
                                ;
 
-attr_pregunta_multiple ::= WIDTH   DOS_PUNTOS expresion:v
+attr_pregunta_multiple ::= LABEL   DOS_PUNTOS CADENA:v
+                           {: RESULT = new Object[]{"label",   v}; :}
+                         | WIDTH   DOS_PUNTOS expresion:v
                            {: RESULT = new Object[]{"width",   v}; :}
                          | HEIGHT  DOS_PUNTOS expresion:v
                            {: RESULT = new Object[]{"height",  v}; :}

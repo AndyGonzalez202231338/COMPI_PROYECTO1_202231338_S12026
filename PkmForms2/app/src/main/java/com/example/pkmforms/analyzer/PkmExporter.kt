@@ -44,7 +44,7 @@ object PkmExporter {
     }
 
 
-    // Exportacion de cada elemento
+    // EXPORTACION RECURSIVA DE ELEMENTOS
     private fun exportarElemento(elemento: FormElement, nivel: Int): String {
         val ind = "    ".repeat(nivel)
         return when (elemento) {
@@ -164,6 +164,7 @@ object PkmExporter {
         val w       = q.width  ?: 0
         val h       = q.height ?: 0
         val label   = escaparTexto(q.label)
+        // Siempre exportar las opciones como strings normales — incluyendo pokemones
         val options = q.options.joinToString(", ") { "\"${escaparTexto(it)}\"" }
         val correct = q.correct
 
@@ -183,14 +184,15 @@ object PkmExporter {
         val ind     = "    ".repeat(nivel)
         val w       = q.width  ?: 0
         val h       = q.height ?: 0
+        val label   = escaparTexto(q.label.ifBlank { "" })
         val options = q.options.joinToString(", ") { "\"${escaparTexto(it)}\"" }
         val correct = q.correct
 
         return if (q.style.estaVacio()) {
-            "${ind}<select=$w,$h,{$options},$correct/>\n"
+            "${ind}<select=$w,$h,\"$label\",{$options},$correct/>\n"
         } else {
             val sb = StringBuilder()
-            sb.appendLine("${ind}<select=$w,$h,{$options},$correct>")
+            sb.appendLine("${ind}<select=$w,$h,\"$label\",{$options},$correct>")
             sb.append(exportarEstilo(q.style, nivel + 1))
             sb.append("${ind}</select>")
             sb.toString()
@@ -286,10 +288,63 @@ object PkmExporter {
     }
 
 
-    // Los emojis ya vienen como texto plano desde FormElement,
-    // no se guardan como tal sino con la notacion @[...]
-    // Por ahora se guarda el texto tal cual (sin emojis Unicode)
-    private fun escaparTexto(texto: String): String = texto
+    // Los emojis deben guardarse con notacion @[...]
+    private fun escaparTexto(texto: String): String = convertirEmojisANotacion(texto)
+
+    /**
+     * Convierte emojis Unicode de vuelta a la notacion @[...] del lenguaje.
+     * Esto es lo inverso de lo que hace el lexer del .form.
+     */
+    private fun convertirEmojisANotacion(texto: String): String {
+        if (texto.isEmpty()) return texto
+        val sb = StringBuilder()
+        var i = 0
+        while (i < texto.length) {
+            // Emojis de dos codepoints (surrogate pairs)
+            val cp = texto.codePointAt(i)
+            val charCount = Character.charCount(cp)
+            val slice = texto.substring(i, i + charCount)
+
+            val dosChars = if (i + charCount < texto.length) {
+                val cp2 = texto.codePointAt(i + charCount)
+                slice + texto.substring(i + charCount, i + charCount + Character.charCount(cp2))
+            } else ""
+
+            when {
+                cp == 0x2764 -> {
+                    sb.append("@[:heart:]")
+                    // saltar el variation selector si existe
+                    i += charCount
+                    if (i < texto.length && texto.codePointAt(i) == 0xFE0F)
+                        i += Character.charCount(0xFE0F)
+                }
+                // Caras
+                cp == 0x1F600 -> { sb.append("@[:smile:]");   i += charCount }
+                cp == 0x1F972 -> { sb.append("@[:sad:]");     i += charCount }
+                cp == 0x1F610 -> { sb.append("@[:serious:]"); i += charCount }
+                // Gato
+                cp == 0x1F63A -> { sb.append("@[:cat:]");     i += charCount }
+                // Estrella: una sola
+                cp == 0x2B50  -> {
+                    // Contar estrellas consecutivas
+                    var count = 0
+                    var j = i
+                    while (j < texto.length && texto.codePointAt(j) == 0x2B50) {
+                        count++
+                        j += Character.charCount(0x2B50)
+                    }
+                    if (count == 1) sb.append("@[:star:]")
+                    else           sb.append("@[:star:$count:]")
+                    i = j
+                }
+                else -> {
+                    sb.appendCodePoint(cp)
+                    i += charCount
+                }
+            }
+        }
+        return sb.toString()
+    }
 
     private fun StyleData.estaVacio(): Boolean =
         color.isBlank() && backgroundColor.isBlank() && fontFamily.isBlank() &&

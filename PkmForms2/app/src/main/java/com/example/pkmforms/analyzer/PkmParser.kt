@@ -19,6 +19,7 @@ import com.example.pkmforms.analyzer.model.ErrorToken
 import com.example.pkmforms.analyzer.model.ErrorType
 import com.example.pkmforms.analyzer.model.FormElement
 import com.example.pkmforms.analyzer.model.StyleData
+import com.example.pkmforms.api.PokemonApi
 
 data class ParseResult(
     val elements : List<FormElement>,
@@ -115,7 +116,7 @@ class PkmParser {
         else      -> v?.toString()
     }
 
-    fun parse(code: String): ParseResult {
+    suspend fun parse(code: String): ParseResult {
         LexerPRO1.errores.clear()
         ParserPRO1.errores.clear()
         ParserPRO1.resultado.clear()
@@ -228,8 +229,8 @@ class PkmParser {
             // Segunda pasada: convertir a FormElement
             val elementos = mutableListOf<FormElement>()
 
-            // Pre-validacion: recorrer todos los nodos buscando mezcla logica
-            // antes de interpretar, para no depender de si el bloque se ejecuta
+            /* Pre-validacion: recorrer todos los nodos buscando mezcla logica
+             antes de interpretar, para no depender de si el bloque se ejecuta*/
             fun validarMezclaEnNodo(nodo: Any?) {
                 when (nodo) {
                     is IfNode -> {
@@ -331,17 +332,31 @@ class PkmParser {
         }
     }
 
-    private fun convertirNodo(obj: Any?): FormElement? {
+    /**
+     * Resuelve las opciones de un DropQuestion o SelectQuestion.
+     * Si la lista tiene el marcador "__pokemon__", llama a la PokéAPI.
+     * De lo contrario, filtra los strings normales.
+     */
+    private suspend fun resolverOpciones(rawOptions: java.util.ArrayList<*>): List<String> {
+        if (rawOptions.firstOrNull() == "__pokemon__") {
+            val min = (rawOptions.getOrNull(1) as? Double)?.toInt() ?: 1
+            val max = (rawOptions.getOrNull(2) as? Double)?.toInt() ?: 10
+            return PokemonApi.obtenerPokemones(min, max)
+        }
+        return rawOptions.filterIsInstance<String>()
+    }
+
+    private suspend fun convertirNodo(obj: Any?): FormElement? {
         return when (obj) {
             is OpenQuestionNode -> FormElement.OpenQuestion(
                 label = resolverStr(obj.label) ?: obj.label,
                 width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
                 style = convertirEstilo(obj.style))
             is DropQuestionNode -> {
-                val opciones = obj.options.filterIsInstance<String>()
+                val rawOpts  = obj.options
+                val esPokemon = rawOpts.firstOrNull() == "__pokemon__"
+                val opciones = resolverOpciones(rawOpts)
                 val correct  = resolverNum(obj.correctVal)?.toInt() ?: -1
-                // Solo validar rango si hay opciones estaticas si esta vacio
-                // significa que vienen de who_is_that_pokemon (dinamicas)
                 if (obj.correctVal != null && opciones.isNotEmpty() && (correct < 0 || correct >= opciones.size)) {
                     advertenciasSelect.add(ErrorToken(
                         lexeme      = "DROP_QUESTION",
@@ -381,6 +396,7 @@ class PkmParser {
                     ))
                 }
                 FormElement.SelectQuestion(
+                    label   = resolverStr(obj.label) ?: obj.label,
                     options = opciones,
                     correct = correct,
                     width   = resolverNum(obj.width)?.toInt(),
@@ -388,7 +404,7 @@ class PkmParser {
                     style   = convertirEstilo(obj.style))
             }
             is MultipleQuestionNode -> FormElement.MultipleQuestion(
-                label   = "",
+                label   = resolverStr(obj.label) ?: obj.label,
                 options = obj.options.filterIsInstance<String>(),
                 correct = obj.correct.mapNotNull { resolverNum(it)?.toInt() },
                 width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
@@ -400,7 +416,9 @@ class PkmParser {
                 elements = obj.elements.mapNotNull { convertirNodo(it) },
                 style = convertirEstilo(obj.style))
             is TableNode -> FormElement.Table(
-                rows = obj.rows.map { row -> row.map { cell -> convertirNodo(cell) } },
+                rows = obj.rows.map { row ->
+                    row.mapNotNull { cell -> convertirNodo(cell) }
+                },
                 width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
                 pointX = resolverNum(obj.pointX)?.toInt(), pointY = resolverNum(obj.pointY)?.toInt(),
                 style = convertirEstilo(obj.style))
@@ -446,14 +464,14 @@ class PkmParser {
         return when (node.tipo) {
             "OPEN"     -> FormElement.OpenQuestion(label = node.label, width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
             "DROP"     -> FormElement.DropQuestion(label = node.label, options = options, correct = resolvedCorrect ?: -1, width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
-            "SELECT"   -> FormElement.SelectQuestion(options = options, correct = resolvedCorrect ?: -1, width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
-            "MULTIPLE" -> FormElement.MultipleQuestion(label = "", options = options, correct = emptyList(), width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
+            "SELECT"   -> FormElement.SelectQuestion(label = node.label, options = options, correct = resolvedCorrect ?: -1, width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
+            "MULTIPLE" -> FormElement.MultipleQuestion(label = node.label, options = options, correct = emptyList(), width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
             else -> null
         }
     }
 
     // INTERPRETE DE BLOQUES
-    private fun interpretarCuerpo(cuerpo: java.util.ArrayList<*>): List<FormElement> {
+    private suspend fun interpretarCuerpo(cuerpo: java.util.ArrayList<*>): List<FormElement> {
         val resultado = mutableListOf<FormElement>()
         for (sentencia in cuerpo) {
             when {
@@ -488,7 +506,7 @@ class PkmParser {
         return resultado
     }
 
-    private fun interpretarIf(node: IfNode): List<FormElement> {
+    private suspend fun interpretarIf(node: IfNode): List<FormElement> {
         for (ramaObj in node.ramas) {
             val rama      = ramaObj as? Array<*> ?: continue
             val condicion = rama[0]
@@ -501,7 +519,7 @@ class PkmParser {
         return emptyList()
     }
 
-    private fun interpretarWhile(node: WhileNode): List<FormElement> {
+    private suspend fun interpretarWhile(node: WhileNode): List<FormElement> {
         val resultado = mutableListOf<FormElement>()
         val cuerpo    = node.cuerpo as? java.util.ArrayList<*> ?: return emptyList()
         validarMezclaLogica(node.condicion, node.linea, erroresLogica)
@@ -513,7 +531,7 @@ class PkmParser {
         return resultado
     }
 
-    private fun interpretarDoWhile(node: DoWhileNode): List<FormElement> {
+    private suspend fun interpretarDoWhile(node: DoWhileNode): List<FormElement> {
         val resultado = mutableListOf<FormElement>()
         val cuerpo    = node.cuerpo as? java.util.ArrayList<*> ?: return emptyList()
         validarMezclaLogica(node.condicion, node.linea, erroresLogica)
@@ -525,7 +543,7 @@ class PkmParser {
         return resultado
     }
 
-    private fun interpretarFor(node: ForNode): List<FormElement> {
+    private suspend fun interpretarFor(node: ForNode): List<FormElement> {
         val resultado = mutableListOf<FormElement>()
         val cuerpo    = node.cuerpo as? java.util.ArrayList<*> ?: return emptyList()
         if (node.esRango) {

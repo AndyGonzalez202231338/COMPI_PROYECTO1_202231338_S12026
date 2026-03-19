@@ -226,12 +226,7 @@ fun ExploreFormsScreen(
                     Button(
                         onClick = {
                             formularioSeleccionado = null
-                            val resultado = PkmImporter.importar(contenido)
-                            if (resultado.error != null) {
-                                Toast.makeText(context, resultado.error, Toast.LENGTH_LONG).show()
-                            } else {
-                                onFormDescargado(contenido)
-                            }
+                            onFormDescargado(contenido)
                         },
                         shape  = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AppColors.Accent)

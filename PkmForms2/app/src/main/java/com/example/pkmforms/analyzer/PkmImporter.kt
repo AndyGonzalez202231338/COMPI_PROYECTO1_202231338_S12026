@@ -45,7 +45,6 @@ object PkmImporter {
 
     @Suppress("UNCHECKED_CAST")
     private fun convertirNodo(obj: Any?): FormElement? {
-        // width/height de 0 se tratan como null para usar el tamaño del padre
         fun Int.nullIfZero(): Int? = if (this == 0) null else this
 
         return when (obj) {
@@ -83,6 +82,7 @@ object PkmImporter {
                 style   = convertirEstilo(obj.style)
             )
             is PkmSelectNode -> FormElement.SelectQuestion(
+                label   = obj.label,
                 options = obj.opciones.filterIsInstance<String>(),
                 correct = obj.correct,
                 width   = obj.width.nullIfZero(),
