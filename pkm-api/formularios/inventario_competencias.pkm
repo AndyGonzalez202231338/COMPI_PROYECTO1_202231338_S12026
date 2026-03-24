@@ -1,0 +1,222 @@
+###
+    Author: PKM_FORMS
+    Fecha: 23/03/2026
+    Descripcion: Inventario de Competencias Profesionales
+    Total de Secciones: 10
+    Total de Preguntas: 16
+###
+
+<table=360,320,0,0>
+    <content>
+
+        <line>
+            <element>
+                <section=360,150,0,0,HORIZONTAL>
+                    <content>
+                        <text=0,0,"Tecnologia | SENIOR">
+                            <style>
+                                <color=#9B59B6/>
+                                <text size=20>
+                            </style>
+                        </text>
+                        <text=0,0,"Total: 335 | Bonus: 98">
+                            <style>
+                                <color=#FFFFFF/>
+                                <background color=(80,30,120)/>
+                            </style>
+                        </text>
+                    </content>
+                    <style>
+                        <border,3,DOUBLE,color=#9B59B6/>
+                    </style>
+                </section>
+            </element>
+        </line>
+
+        <line>
+            <element>
+                <text=0,0,"Base: 80 | Nivel: 4">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=<280,60,40>/>
+                        <text size=16>
+                    </style>
+                </text>
+            </element>
+        </line>
+
+    </content>
+</table>
+
+
+<section=360,580,0,0,VERTICAL>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 1 (nivel 1):">
+            <style>
+                <color=(78,101,200)/>
+                <text size=14>
+            </style>
+        </open>
+        <select=0,0,"Categoria de competencia: Tipo 1",{"Tecnica","Liderazgo","Analitica","Comunicacion Sector 1"},1>
+            <style>
+                <background color=(181,101,120)/>
+            </style>
+        </select>
+        <multiple=0,0,"Logros destacados",{"Certificacion","Premio","Proyecto","Publicacion","Innovacion"},{0,1,2}>
+            <style>
+                <background color=(120,90,198)/>
+                <text size=15>
+            </style>
+        </multiple>
+    </content>
+    <style>
+        <background color=(181,101,120)/>
+        <border,2,DOTTED,color=#8E44AD/>
+    </style>
+</section>
+
+
+<section=360,580,0,0,VERTICAL>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 1 (nivel 2):">
+            <style>
+                <color=(78,102,200)/>
+                <text size=16>
+            </style>
+        </open>
+        <select=0,0,"Categoria de competencia: Tipo 1",{"Tecnica","Liderazgo","Analitica","Comunicacion Sector 2"},2>
+            <style>
+                <background color=(181,102,120)/>
+            </style>
+        </select>
+        <multiple=0,0,"Logros destacados",{"Certificacion","Premio","Proyecto","Publicacion","Innovacion"},{0,1,2}>
+            <style>
+                <background color=(120,100,198)/>
+                <text size=15>
+            </style>
+        </multiple>
+    </content>
+    <style>
+        <background color=(181,102,120)/>
+        <border,2,DOTTED,color=#8E44AD/>
+    </style>
+</section>
+
+
+<section=360,580,0,0,VERTICAL>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 2 (nivel 1):">
+            <style>
+                <color=(76,102,200)/>
+                <text size=14>
+            </style>
+        </open>
+        <select=0,0,"Categoria de competencia: Tipo 2",{"Tecnica","Liderazgo","Analitica","Comunicacion Sector 1"},1>
+            <style>
+                <background color=(182,101,120)/>
+            </style>
+        </select>
+        <multiple=0,0,"Logros destacados",{"Certificacion","Premio","Proyecto","Publicacion","Innovacion"},{1,0,2}>
+            <style>
+                <background color=(140,110,196)/>
+                <text size=15>
+            </style>
+        </multiple>
+    </content>
+    <style>
+        <background color=(182,101,120)/>
+        <border,3,DOTTED,color=#8E44AD/>
+    </style>
+</section>
+
+
+<section=360,500,0,0,VERTICAL>
+    <content>
+        <drop=0,0,"Tecnologia en Stack 1 nivel 2",{"bulbasaur","ivysaur","venusaur","charmander"},1>
+            <style>
+                <color=#9B59B6/>
+                <background color=<25,81,179>/>
+            </style>
+        </drop>
+        <open=0,0,"Competencia en Stack 1 nivel 2:">
+            <style>
+                <color=(78,81,194)/>
+                <text size=14>
+            </style>
+        </open>
+    </content>
+    <style>
+        <background color=<25,80,200>/>
+        <color=#FFFFFF/>
+    </style>
+</section>
+
+
+<section=360,500,0,0,VERTICAL>
+    <content>
+        <drop=0,0,"Tecnologia en Stack 2 nivel 4",{"ivysaur","venusaur","charmander","charmeleon","charizard","squirtle"},2>
+            <style>
+                <color=#9B59B6/>
+                <background color=<50,82,178>/>
+            </style>
+        </drop>
+        <open=0,0,"Competencia en Stack 2 nivel 4:">
+            <style>
+                <color=(74,82,192)/>
+                <text size=14>
+            </style>
+        </open>
+    </content>
+    <style>
+        <background color=<50,80,200>/>
+        <color=#FFFFFF/>
+    </style>
+</section>
+
+
+<section=360,500,0,0,VERTICAL>
+    <content>
+        <drop=0,0,"Tecnologia en Stack 3 nivel 6",{"venusaur","charmander","charmeleon","charizard","squirtle","wartortle","blastoise"},3>
+            <style>
+                <color=#9B59B6/>
+                <background color=<75,83,177>/>
+            </style>
+        </drop>
+        <open=0,0,"Competencia en Stack 3 nivel 6:">
+            <style>
+                <color=(70,83,190)/>
+                <text size=14>
+            </style>
+        </open>
+    </content>
+    <style>
+        <background color=<75,80,200>/>
+        <color=#FFFFFF/>
+    </style>
+</section>
+
+
+<section=360,70,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Cierre 2 | Acum: 2415 | Estado: SENIOR">
+            <style>
+                <color=#FFFFFF/>
+                <background color=#2C3E50/>
+                <text size=15>
+            </style>
+        </text>
+    </content>
+</section>
+
+
+<section=360,70,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Cierre 3 | Acum: 2431 | Estado: SENIOR">
+            <style>
+                <color=#FFFFFF/>
+                <background color=#2C3E50/>
+                <text size=15>
+            </style>
+        </text>
+    </content>
+</section>

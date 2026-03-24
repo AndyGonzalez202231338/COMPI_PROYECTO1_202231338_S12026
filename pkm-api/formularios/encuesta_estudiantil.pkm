@@ -1,0 +1,201 @@
+###
+    Author: PKM_FORMS
+    Fecha: 23/03/2026
+    Descripcion: Encuesta de Satisfaccion Estudiantil
+    Total de Secciones: 8
+    Total de Preguntas: 12
+###
+
+<table=360,200,0,0>
+    <content>
+
+        <line>
+            <element>
+                <section=360,90,0,0,HORIZONTAL>
+                    <content>
+                        <text=0,0,"Carrera: Ingenieria en Sistemas">
+                            <style>
+                                <color=#FFFFFF/>
+                                <background color=(31,78,121)/>
+                                <text size=16>
+                            </style>
+                        </text>
+                        <text=0,0,"Semestre: 3 | Creditos: 45">
+                            <style>
+                                <color=#1F4E79/>
+                                <text size=14>
+                            </style>
+                        </text>
+                    </content>
+                </section>
+            </element>
+        </line>
+
+        <line>
+            <element>
+                <text=0,0,"Nivel: Avanzado | Puntaje: 145">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=(30,130,80)/>
+                        <text size=18>
+                    </style>
+                </text>
+            </element>
+        </line>
+
+    </content>
+</table>
+
+
+<section=360,340,0,0,VERTICAL>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con Area 1:",{"Excelente","Bueno","Regular","Deficiente"},1>
+            <style>
+                <background color=(201,100,179)/>
+            </style>
+        </select>
+        <open=0,0,"Describe tu experiencia en Area 1">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>
+    </content>
+    <style>
+        <background color=(201,100,179)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+</section>
+
+
+<section=360,340,0,0,VERTICAL>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con Area 1:",{"Excelente","Bueno","Regular","Deficiente"},1>
+            <style>
+                <background color=(201,100,178)/>
+            </style>
+        </select>
+        <open=0,0,"Describe tu experiencia en Area 1">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>
+    </content>
+    <style>
+        <background color=(201,100,178)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+</section>
+
+
+<section=360,340,0,0,VERTICAL>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con Area 2:",{"Excelente","Bueno","Regular","Deficiente"},1>
+            <style>
+                <background color=(202,100,178)/>
+            </style>
+        </select>
+        <open=0,0,"Describe tu experiencia en Area 2">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>
+    </content>
+    <style>
+        <background color=(202,100,178)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+</section>
+
+
+<section=360,340,0,0,VERTICAL>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con Area 3:",{"Excelente","Bueno","Regular","Deficiente"},1>
+            <style>
+                <background color=(203,100,177)/>
+            </style>
+        </select>
+        <open=0,0,"Describe tu experiencia en Area 3">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>
+    </content>
+    <style>
+        <background color=(203,100,177)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+</section>
+
+
+<section=360,460,0,0,VERTICAL>
+    <content>
+        <drop=0,0,"Docente favorito:",{"bulbasaur","ivysaur","venusaur","charmander","charmeleon","charizard"},1>
+            <style>
+                <color=#2ECC71/>
+                <background color=<100,40,180>/>
+            </style>
+        </drop>
+        <multiple=0,0,"Selecciona las areas que necesitan mejora:",{"Infraestructura","Biblioteca","Docencia","Horarios","Laboratorio"},{0,2,3}>
+            <style>
+                <background color=<121,80,199>/>
+                <text size=14>
+            </style>
+        </multiple>
+    </content>
+    <style>
+        <color=#FFFFFF/>
+        <background color=<20,100,200>/>
+    </style>
+</section>
+
+
+<section=360,460,0,0,VERTICAL>
+    <content>
+        <drop=0,0,"Docente favorito:",{"ivysaur","venusaur","charmander","charmeleon","charizard","squirtle","wartortle"},2>
+            <style>
+                <color=#2ECC71/>
+                <background color=<100,60,180>/>
+            </style>
+        </drop>
+        <multiple=0,0,"Selecciona las areas que necesitan mejora:",{"Infraestructura","Tutoria","Docencia","Horarios","Cafeteria"},{0,2,3}>
+            <style>
+                <background color=<122,80,198>/>
+                <text size=14>
+            </style>
+        </multiple>
+    </content>
+    <style>
+        <color=#FFFFFF/>
+        <background color=<40,100,200>/>
+    </style>
+</section>
+
+
+<section=360,80,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Ronda 1 | Total: 165">
+            <style>
+                <color=#000000/>
+                <background color=#FFFF00/>
+                <text size=16>
+            </style>
+        </text>
+    </content>
+</section>
+
+
+<section=360,80,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Ronda 2 | Total: 170">
+            <style>
+                <color=#000000/>
+                <background color=#FFFF00/>
+                <text size=16>
+            </style>
+        </text>
+    </content>
+</section>

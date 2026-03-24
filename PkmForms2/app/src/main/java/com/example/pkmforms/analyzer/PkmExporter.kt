@@ -300,7 +300,6 @@ object PkmExporter {
         val sb = StringBuilder()
         var i = 0
         while (i < texto.length) {
-            // Emojis de dos codepoints (surrogate pairs)
             val cp = texto.codePointAt(i)
             val charCount = Character.charCount(cp)
             val slice = texto.substring(i, i + charCount)

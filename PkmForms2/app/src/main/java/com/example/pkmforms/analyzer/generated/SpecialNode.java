@@ -7,9 +7,9 @@ public class SpecialNode {
     public String    tipo        = "";   // "OPEN" | "DROP" | "SELECT" | "MULTIPLE"
     public Object    width       = null; // Double, String (identificador) o "?" (comodin)
     public Object    height      = null;
-    public String    label       = "";
+    public Object    label       = "";
     public ArrayList options     = new ArrayList();
     public Object    correct     = null;
-    public int       comodines   = 0;   // cantidad de comodines en esta definicion
+    public int       comodines   = 0;   // cantidad de comodines
     public StyleNode style       = null;
 }
