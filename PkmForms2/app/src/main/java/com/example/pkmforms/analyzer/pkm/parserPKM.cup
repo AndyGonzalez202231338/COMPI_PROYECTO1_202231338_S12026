@@ -168,6 +168,30 @@ seccion ::= TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:p
                 n.pointX=px.intValue(); n.pointY=py.intValue();
                 RESULT = n;
             :}
+          /* content primero, style despues — con ORIENTATION */
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py COMA ORIENTATION:ori GT
+              TAG_CONTENT_OPEN elementos:hijos TAG_CONTENT_CLOSE
+              TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.orientation=ori; n.elementos=hijos; n.style=s;
+                RESULT = n;
+            :}
+          /* content primero, style despues — sin ORIENTATION */
+          | TAG_SECTION_OPEN NUMERO:w COMA NUMERO:h COMA NUMERO:px COMA NUMERO:py GT
+              TAG_CONTENT_OPEN elementos:hijos TAG_CONTENT_CLOSE
+              TAG_STYLE_OPEN estilo_lista:s TAG_STYLE_CLOSE
+            TAG_SECTION_CLOSE
+            {:
+                PkmSectionNode n = new PkmSectionNode();
+                n.width=w.intValue(); n.height=h.intValue();
+                n.pointX=px.intValue(); n.pointY=py.intValue();
+                n.elementos=hijos; n.style=s;
+                RESULT = n;
+            :}
           ;
 
 /* ---- TABLA ---- */
@@ -418,6 +442,8 @@ estilo_lista ::= estilo_lista:s STYLE_COLOR COLOR:v SLASH_GT
                | estilo_lista:s STYLE_FONT FONT_VAL:v GT
                  {: s.fontFamily = v; RESULT = s; :}
                | estilo_lista:s STYLE_SIZE NUMERO:v GT
+                 {: s.textSize = v.floatValue(); RESULT = s; :}
+               | estilo_lista:s STYLE_SIZE NUMERO:v SLASH_GT
                  {: s.textSize = v.floatValue(); RESULT = s; :}
                | estilo_lista:s STYLE_BORDER NUMERO:n COMA BORDER_TYPE:t COMA COLOR:c SLASH_GT
                  {: s.borderSize = n.floatValue(); s.borderType = t; s.borderColor = c; RESULT = s; :}

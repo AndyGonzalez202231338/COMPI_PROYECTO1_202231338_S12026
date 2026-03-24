@@ -70,9 +70,19 @@ fun EditorScreen(
         )
 
         EditorActionBar(
-            onReplace = { /* TODO */ },
-            onAdd     = { /* TODO */ },
             onFinish  = { onFinish() },
+            onTemplateInsert = { template ->
+                val cursor  = textFieldValue.selection.start
+                val before  = textFieldValue.text.substring(0, cursor)
+                val after   = textFieldValue.text.substring(cursor)
+                val newText = before + template + after
+                val newPos  = cursor + template.length
+                textFieldValue = TextFieldValue(
+                    text      = newText,
+                    selection = TextRange(newPos)
+                )
+                onCodeChange(newText)
+            },
             onColorInsert = { colorString ->
                 val cursor  = textFieldValue.selection.start
                 val before  = textFieldValue.text.substring(0, cursor)

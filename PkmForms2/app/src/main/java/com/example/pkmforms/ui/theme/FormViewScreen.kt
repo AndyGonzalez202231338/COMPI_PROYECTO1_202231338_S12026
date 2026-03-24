@@ -189,7 +189,7 @@ fun FormViewScreen(
                     // Resetear contador antes de renderizar
                     contadorPreguntas.value = 0
                     elements.forEach { element ->
-                        FormElementRender(element = element)
+                        FormElementRender(element = element, useAbsoluteOffset = false)
                     }
                 }
             }
@@ -508,18 +508,19 @@ private fun SendDialog(
 @Composable
 fun FormElementRender(
     element: FormElement,
-    inheritedWidth:  Int? = null,
-    inheritedHeight: Int? = null,
-    inheritedStyle:  StyleData? = null
+    inheritedWidth:      Int?     = null,
+    inheritedHeight:     Int?     = null,
+    inheritedStyle:      StyleData? = null,
+    useAbsoluteOffset:   Boolean  = false
 ) {
     when (element) {
-        is FormElement.Section          -> SectionRender(element, inheritedWidth, inheritedHeight, inheritedStyle)
+        is FormElement.Section          -> SectionRender(element, inheritedWidth, inheritedHeight, inheritedStyle, useAbsoluteOffset)
         is FormElement.OpenQuestion     -> OpenQuestionRender(element, inheritedWidth, inheritedHeight, inheritedStyle)
         is FormElement.DropQuestion     -> DropQuestionRender(element, inheritedWidth, inheritedHeight, inheritedStyle)
         is FormElement.SelectQuestion   -> SelectQuestionRender(element, inheritedWidth, inheritedHeight, inheritedStyle)
         is FormElement.MultipleQuestion -> MultipleQuestionRender(element, inheritedWidth, inheritedHeight, inheritedStyle)
         is FormElement.TextElement      -> TextElementRender(element, inheritedWidth, inheritedHeight, inheritedStyle)
-        is FormElement.Table            -> TableRender(element, inheritedWidth, inheritedHeight)
+        is FormElement.Table            -> TableRender(element, inheritedWidth, inheritedHeight, useAbsoluteOffset)
     }
 }
 
@@ -528,9 +529,10 @@ fun FormElementRender(
 @Composable
 fun SectionRender(
     section: FormElement.Section,
-    inheritedWidth:  Int?       = null,
-    inheritedHeight: Int?       = null,
-    inheritedStyle:  StyleData? = null
+    inheritedWidth:     Int?       = null,
+    inheritedHeight:    Int?       = null,
+    inheritedStyle:     StyleData? = null,
+    useAbsoluteOffset:  Boolean    = false
 ) {
     val resolvedWidth  = section.width  ?: inheritedWidth
     val resolvedHeight = section.height ?: inheritedHeight
@@ -548,7 +550,12 @@ fun SectionRender(
 
     // En VERTICAL la seccion crece con su contenido (wrapContentHeight)
     // En HORIZONTAL respeta el height definido
-    val sizeModifier = Modifier
+    val offsetModifier = if (useAbsoluteOffset && section.pointX != null && section.pointY != null)
+        Modifier.absoluteOffset(section.pointX.dp, section.pointY.dp)
+    else
+        Modifier
+
+    val sizeModifier = offsetModifier
         .then(if (resolvedWidth != null) Modifier.width(resolvedWidth.dp) else Modifier.fillMaxWidth())
         .then(
             when {
@@ -873,13 +880,14 @@ fun MultipleQuestionRender(
 @Composable
 fun TableRender(
     table: FormElement.Table,
-    inheritedWidth:  Int?       = null,
-    inheritedHeight: Int?       = null
+    inheritedWidth:    Int?    = null,
+    inheritedHeight:   Int?    = null,
+    useAbsoluteOffset: Boolean = false
 ) {
     val resolvedWidth  = table.width  ?: inheritedWidth
     val resolvedHeight = table.height ?: inheritedHeight
     val style = table.style
-    val offsetModifier = if (table.pointX != null && table.pointY != null) {
+    val offsetModifier = if (useAbsoluteOffset && table.pointX != null && table.pointY != null) {
         Modifier.absoluteOffset(table.pointX.dp, table.pointY.dp)
     } else Modifier
     Column(
@@ -904,8 +912,9 @@ fun TableRender(
                     ) {
                         if (cell != null) {
                             FormElementRender(
-                                element         = cell,
-                                inheritedStyle  = style
+                                element            = cell,
+                                inheritedStyle     = style,
+                                useAbsoluteOffset  = true
                             )
                         }
                     }

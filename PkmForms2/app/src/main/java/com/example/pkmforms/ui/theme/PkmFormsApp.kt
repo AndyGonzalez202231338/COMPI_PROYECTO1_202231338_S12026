@@ -96,6 +96,42 @@ fun PkmFormsApp() {
                         }
                     }
                 },
+               /* onReplace = {
+                    // Reemplaza TODOS los elementos actuales con los nuevos
+                    scope.launch {
+                        parseando = true
+                        val result = parser.parse(codeText)
+                        parseando = false
+                        if (result.errors.any { it.type != ErrorType.ADVERTENCIA }) {
+                            errors    = result.errors.sortedWith(compareBy({ it.line }, { it.column }))
+                            hasErrors = true
+                        } else {
+                            elements         = result.elements
+                            errors           = result.errors
+                            hasErrors        = false
+                            modoContestacion = false
+                            navController.navigate(Routes.FORM_VIEW)
+                        }
+                    }
+                },*/
+                /*onAdd = {
+                    // Agrega los nuevos elementos AL FINAL de los existentes
+                    scope.launch {
+                        parseando = true
+                        val result = parser.parse(codeText)
+                        parseando = false
+                        if (result.errors.any { it.type != ErrorType.ADVERTENCIA }) {
+                            errors    = result.errors.sortedWith(compareBy({ it.line }, { it.column }))
+                            hasErrors = true
+                        } else {
+                            elements         = elements + result.elements
+                            errors           = result.errors
+                            hasErrors        = false
+                            modoContestacion = false
+                            navController.navigate(Routes.FORM_VIEW)
+                        }
+                    }
+                },*/
                 onNavigateFormView = { result ->
                     elements         = result
                     errors           = emptyList()

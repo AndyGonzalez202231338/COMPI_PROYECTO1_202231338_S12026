@@ -6,8 +6,8 @@ package com.example.pkmforms.analyzer.generated;
  * ParserPRO1.resultado cuando termina de reducir la regla completa.
  */
 public class OpenQuestionNode {
-    public String   label    = "";
-    public Object   width    = null;   // Double o String (identificador)
+    public Object   label    = "";
+    public Object   width    = null;
     public Object   height   = null;
     public StyleNode style   = null;
 }

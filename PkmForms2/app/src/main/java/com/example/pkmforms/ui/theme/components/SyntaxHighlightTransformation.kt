@@ -101,7 +101,7 @@ class SyntaxHighlightTransformation : VisualTransformation {
             }
 
             // Operadores aritmeticos
-            if (code[i] in setOf('+', '*', '/', '^', '%')) {
+            if (code[i] in setOf('+', '-', '*', '/', '^', '%')) {
                 addStyle(SpanStyle(color = ColorOperator), i, i + 1)
                 i++
                 continue

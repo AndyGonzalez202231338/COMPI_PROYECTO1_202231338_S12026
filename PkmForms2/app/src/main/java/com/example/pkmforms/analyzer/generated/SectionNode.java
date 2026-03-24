@@ -10,4 +10,5 @@ public class SectionNode {
     public String    orientation = "VERTICAL";
     public StyleNode style       = null;
     public ArrayList<Object> elements = new ArrayList<>();
+    public int       linea   = 0;
 }

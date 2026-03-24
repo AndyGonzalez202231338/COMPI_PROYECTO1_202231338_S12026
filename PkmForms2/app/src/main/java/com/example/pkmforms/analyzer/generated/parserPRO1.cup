@@ -186,6 +186,56 @@ parser code {:
         return "?";
     }
 
+    private String serializarCanalColor(Object v) {
+        if (v == null) return "0";
+        if (v instanceof Double) return String.valueOf(((Double)v).intValue());
+        if ("__COMODIN__".equals(v)) return "?";
+        if (v instanceof Object[]) {
+            Object[] arr = (Object[]) v;
+            String op = arr.length > 0 && arr[0] instanceof String ? (String)arr[0] : "";
+            // Operadores con comodin embebido: __expr+?__, __?+expr__, etc
+            if (op.startsWith("__") && op.contains("?") && op.endsWith("__")) {
+                // Extraer la parte numerica y preservar el ?
+                Object base = arr.length > 1 ? arr[1] : null;
+                String baseStr = (base instanceof Double) ? String.valueOf(((Double)base).intValue()) : base != null ? base.toString() : "0";
+                if (op.contains("expr+?")) return baseStr + "+?";
+                if (op.contains("expr-?")) return baseStr + "-?";
+                if (op.contains("expr*?")) return baseStr + "*?";
+                if (op.contains("?+expr")) return "?+" + baseStr;
+                if (op.contains("?-expr")) return "?-" + baseStr;
+                if (op.contains("?*expr")) return "?*" + baseStr;
+                return "?";
+            }
+            // op+ con variables como colorBase+(i*5)
+            // Serializar recursivamente buscando __COMODIN__
+            StringBuilder sb = new StringBuilder();
+            for (int i = 1; i < arr.length; i++) {
+                if (i > 1) sb.append(op.equals("op+") ? "+" : op.replace("op",""));
+                sb.append(serializarCanalColor(arr[i]));
+            }
+            return sb.length() > 0 ? sb.toString() : v.toString();
+        }
+        return v.toString();
+    }
+
+    private int contarComodinesExpr(Object v) {
+        if ("__COMODIN__".equals(v)) return 1;
+        if (v instanceof Object[]) {
+            Object[] arr = (Object[]) v;
+            // Operadores con comodin embebido: "__expr+?__", "__?*expr__", etc.
+            if (arr.length > 0 && arr[0] instanceof String) {
+                String op = (String) arr[0];
+                if (op.startsWith("__") && op.contains("?") && op.endsWith("__")) return 1;
+            }
+            int total = 0;
+            for (int i = 1; i < arr.length; i++) {
+                total += contarComodinesExpr(arr[i]);
+            }
+            return total;
+        }
+        return 0;
+    }
+
     @Override
     public void syntax_error(Symbol token) {
         String lexema  = lexemaReal(token);
@@ -272,6 +322,7 @@ terminal IN;
 
 /* PokeAPI */
 terminal WHO_IS_THAT_POKEMON;
+terminal HSL_FUNC;
 terminal NUMBER_CONST;
 
 /* Metodo draw */
@@ -346,6 +397,8 @@ non terminal expr_primaria;
 non terminal Object valor_o_comodin;
 
 non terminal String color;
+non terminal String colorExpr;
+non terminal String hsl_expr_nt;
 non terminal StyleNode bloque_styles;
 non terminal StyleNode style_lista;
 non terminal StyleNode style_item;
@@ -393,13 +446,14 @@ non terminal Object               attr_pregunta_multiple;
 
 non terminal ArrayList lista_opciones;
 non terminal ArrayList lista_opciones_items;
+non terminal Object    opcion_item;
 non terminal ArrayList lista_correctos;
 non terminal ArrayList lista_correctos_items;
 non terminal ArrayList fuente_opciones;
 
 non terminal SpecialNode attr_special_lista;
 non terminal Object attr_special;
-non terminal llamada_draw;
+non terminal Object llamada_draw;
 non terminal ArrayList args_draw;
 non terminal ArrayList args_draw_lista;
 
@@ -452,7 +506,8 @@ sentencia ::= decl_variable
               {: if (n != null) ParserPRO1.resultado.add(n); RESULT = n; :}
             | bloque_codigo:n
               {: if (n != null) ParserPRO1.resultado.add(n); RESULT = n; :}
-            | llamada_draw
+            | llamada_draw:n
+              {: if (n != null) ParserPRO1.resultado.add(n); RESULT = n; :}
             | error
             ;
 
@@ -473,12 +528,12 @@ expresion ::= expr_logica_or:v
 /*
  * Jerarquia de expresiones (de menor a mayor precedencia):
  *
- *   expr_logica_or   ->  expr_logica_and  |  ... OR ...
- *   expr_logica_and  ->  expr_not         |  ... AND ...
+ *   expr_logica_or   ->  expr_logica_and  |  OR
+ *   expr_logica_and  ->  expr_not         |  AND
  *   expr_not         ->  expr_comparacion |  NOT expr_comparacion
- *   expr_comparacion ->  expr_aritmetica  |  ... == ...  etc.
- *   expr_aritmetica  ->  expr_unaria      |  ... + ...   etc.
- *   expr_unaria      ->  expr_primaria    |  - expr_primaria
+ *   expr_comparacion ->  expr_aritmetica  |  ==
+ *   expr_aritmetica  ->  expr_unaria      |  +
+ *   expr_unaria      ->  expr_primaria    |  expr_primaria
  *   expr_primaria    ->  NUMERO | CADENA | IDENTIFICADOR | (expresion)
  *
  * Cada nivel deriva en el nivel inferior cuando no tiene operador propio,
@@ -521,29 +576,29 @@ expr_comparacion ::= expr_aritmetica:a MAYOR        expr_aritmetica:b
 
 expr_aritmetica ::= expr_aritmetica:a MAS   expr_aritmetica:b
                     {:
-                        if ("?".equals(a) && b instanceof Number) RESULT = new Object[]{"?+expr", b};
-                        else if ("?".equals(b) && a instanceof Number) RESULT = new Object[]{"expr+?", a};
+                        if ("__COMODIN__".equals(a) && b instanceof Number) RESULT = new Object[]{"__?+expr__", b};
+                        else if ("__COMODIN__".equals(b) && a instanceof Number) RESULT = new Object[]{"__expr+?__", a};
                         else if (a instanceof Number && b instanceof Number) RESULT = ((Number)a).doubleValue() + ((Number)b).doubleValue();
                         else RESULT = new Object[]{"op+", a, b};
                     :}
                   | expr_aritmetica:a MENOS expr_aritmetica:b
                     {:
-                        if ("?".equals(a) && b instanceof Number) RESULT = new Object[]{"?-expr", b};
-                        else if ("?".equals(b) && a instanceof Number) RESULT = new Object[]{"expr-?", a};
+                        if ("__COMODIN__".equals(a) && b instanceof Number) RESULT = new Object[]{"__?-expr__", b};
+                        else if ("__COMODIN__".equals(b) && a instanceof Number) RESULT = new Object[]{"__expr-?__", a};
                         else if (a instanceof Number && b instanceof Number) RESULT = ((Number)a).doubleValue() - ((Number)b).doubleValue();
                         else RESULT = new Object[]{"op-", a, b};
                     :}
                   | expr_aritmetica:a POR   expr_aritmetica:b
                     {:
-                        if ("?".equals(a) && b instanceof Number) RESULT = new Object[]{"?*expr", b};
-                        else if ("?".equals(b) && a instanceof Number) RESULT = new Object[]{"expr*?", a};
+                        if ("__COMODIN__".equals(a) && b instanceof Number) RESULT = new Object[]{"__?*expr__", b};
+                        else if ("__COMODIN__".equals(b) && a instanceof Number) RESULT = new Object[]{"__expr*?__", a};
                         else if (a instanceof Number && b instanceof Number) RESULT = ((Number)a).doubleValue() * ((Number)b).doubleValue();
                         else RESULT = new Object[]{"op*", a, b};
                     :}
                   | expr_aritmetica:a DIV   expr_aritmetica:b
                     {:
-                        if ("?".equals(a) && b instanceof Number) RESULT = new Object[]{"?/expr", b};
-                        else if ("?".equals(b) && a instanceof Number) RESULT = new Object[]{"expr/?", a};
+                        if ("__COMODIN__".equals(a) && b instanceof Number) RESULT = new Object[]{"__?/expr__", b};
+                        else if ("__COMODIN__".equals(b) && a instanceof Number) RESULT = new Object[]{"__expr/?__", a};
                         else if (a instanceof Number && b instanceof Number && ((Number)b).doubleValue() != 0) RESULT = ((Number)a).doubleValue() / ((Number)b).doubleValue();
                         else RESULT = new Object[]{"op/", a, b};
                     :}
@@ -579,9 +634,9 @@ expr_primaria ::= NUMERO:v
                 | IDENTIFICADOR:v
                   {: RESULT = v; :}
                 | PAREN_ABRE expresion:v PAREN_CIERRA
-                  {: RESULT = v; :}
+                  {: RESULT = new Object[]{"group", v}; :}
                 | COMODIN
-                  {: RESULT = "?"; :}
+                  {: RESULT = "__COMODIN__"; :}
                 ;
 /* =================    COLORES  =================*/
 color ::= COLOR_HEX:v        {: RESULT = v; :}
@@ -589,6 +644,33 @@ color ::= COLOR_HEX:v        {: RESULT = v; :}
         | COLOR_HSL:v        {: RESULT = v; :}
         | COLOR_PREDEFINIDO:v {: RESULT = v; :}
         ;
+
+colorExpr ::= color:v
+              {: RESULT = v; :}
+            | PAREN_ABRE expresion:r COMA expresion:g COMA expresion:b PAREN_CIERRA
+              {:
+                  String rs = serializarCanalColor(r);
+                  String gs = serializarCanalColor(g);
+                  String bs = serializarCanalColor(b);
+                  RESULT = "rgb_expr:" + rs + ":" + gs + ":" + bs;
+              :}
+            | MENOR expresion:r COMA expresion:g COMA expresion:b MAYOR
+              {:
+                  String rs = serializarCanalColor(r);
+                  String gs = serializarCanalColor(g);
+                  String bs = serializarCanalColor(b);
+                  RESULT = "rgb_expr:" + rs + ":" + gs + ":" + bs;
+              :}
+            ;
+
+hsl_expr_nt ::= HSL_FUNC PAREN_ABRE expresion:h COMA expresion:s COMA expresion:l PAREN_CIERRA
+                {:
+                    String hs = serializarCanalColor(h);
+                    String ss = serializarCanalColor(s);
+                    String ls = serializarCanalColor(l);
+                    RESULT = "hsl_expr:" + hs + ":" + ss + ":" + ls;
+                :}
+              ;
 
 /* =================    VARIABLES  =================*/
 decl_variable ::= decl_number
@@ -636,13 +718,27 @@ attr_special_lista ::= attr_special_lista:node COMA attr_special:attr
                          String clave = (String) a[0];
                          if (clave.equals("width"))   node.width   = a[1];
                          if (clave.equals("height"))  node.height  = a[1];
-                         if (clave.equals("label"))   node.label   = a[1] != null ? a[1].toString() : "";
+                         if (clave.equals("label"))   node.label   = (Object) a[1];
                          if (clave.equals("options")) node.options = (ArrayList) a[1];
                          if (clave.equals("correct")) node.correct = a[1];
-                         // contar comodines nuevos del atributo
                          if (a.length > 2 && a[2] != null) node.comodines += ((Integer) a[2]);
                          RESULT = node;
                      :}
+                     | attr_special_lista:node COMA bloque_styles:s
+                       {: node.style = s; RESULT = node; :}
+                     | attr_special_lista:node COMA WHO_IS_THAT_POKEMON PAREN_ABRE NUMBER_CONST COMA expresion:min COMA expresion:max PAREN_CIERRA
+                       {:
+                           ArrayList lista = new ArrayList();
+                           lista.add("__pokemon__"); lista.add(min); lista.add(max);
+                           node.options = lista; RESULT = node;
+                       :}
+                     | WHO_IS_THAT_POKEMON PAREN_ABRE NUMBER_CONST COMA expresion:min COMA expresion:max PAREN_CIERRA
+                       {:
+                           SpecialNode node = new SpecialNode();
+                           ArrayList lista = new ArrayList();
+                           lista.add("__pokemon__"); lista.add(min); lista.add(max);
+                           node.options = lista; RESULT = node;
+                       :}
                      | attr_special:attr
                      {:
                          SpecialNode node = new SpecialNode();
@@ -650,32 +746,47 @@ attr_special_lista ::= attr_special_lista:node COMA attr_special:attr
                          String clave = (String) a[0];
                          if (clave.equals("width"))   node.width   = a[1];
                          if (clave.equals("height"))  node.height  = a[1];
-                         if (clave.equals("label"))   node.label   = a[1] != null ? a[1].toString() : "";
+                         if (clave.equals("label"))   node.label   = (Object) a[1];
                          if (clave.equals("options")) node.options = (ArrayList) a[1];
                          if (clave.equals("correct")) node.correct = a[1];
                          if (a.length > 2 && a[2] != null) node.comodines += ((Integer) a[2]);
                          RESULT = node;
                      :}
+                     | bloque_styles:s
+                       {: SpecialNode node = new SpecialNode(); node.style = s; RESULT = node; :}
                      ;
 
 attr_special ::= WIDTH   DOS_PUNTOS expresion:v
                    {:
-                       int c = ("?".equals(v) || (v instanceof Object[] && ((Object[])v)[0] instanceof String && ((String)((Object[])v)[0]).contains("?"))) ? 1 : 0;
+                       int c = ("__COMODIN__".equals(v) || (v instanceof Object[] && ((Object[])v)[0] instanceof String && ((String)((Object[])v)[0]).contains("?"))) ? 1 : 0;
                        RESULT = new Object[]{"width",   v, c};
                    :}
                | HEIGHT  DOS_PUNTOS expresion:v
                    {:
-                       int c = ("?".equals(v) || (v instanceof Object[] && ((Object[])v)[0] instanceof String && ((String)((Object[])v)[0]).contains("?"))) ? 1 : 0;
+                       int c = ("__COMODIN__".equals(v) || (v instanceof Object[] && ((Object[])v)[0] instanceof String && ((String)((Object[])v)[0]).contains("?"))) ? 1 : 0;
                        RESULT = new Object[]{"height",  v, c};
                    :}
                | CORRECT DOS_PUNTOS expresion:v
                    {:
-                       int c = ("?".equals(v) || (v instanceof Object[] && ((Object[])v)[0] instanceof String && ((String)((Object[])v)[0]).contains("?"))) ? 1 : 0;
+                       int c = ("__COMODIN__".equals(v) || (v instanceof Object[] && ((Object[])v)[0] instanceof String && ((String)((Object[])v)[0]).contains("?"))) ? 1 : 0;
                        RESULT = new Object[]{"correct", v, c};
                    :}
-               | LABEL   DOS_PUNTOS CADENA:v
-                   {: RESULT = new Object[]{"label",   v, 0}; :}
-               | OPTIONS DOS_PUNTOS lista_opciones:v
+               | CORRECT DOS_PUNTOS lista_correctos:v
+                   {:
+                       int c = 0;
+                       if (v instanceof java.util.ArrayList) {
+                           for (Object item : (java.util.ArrayList) v) {
+                               c += contarComodinesExpr(item);
+                           }
+                       }
+                       RESULT = new Object[]{"correct", v, c};
+                   :}
+               | LABEL   DOS_PUNTOS expresion:v
+                   {:
+                       int c = contarComodinesExpr(v);
+                       RESULT = new Object[]{"label", v, c};
+                   :}
+               | OPTIONS DOS_PUNTOS fuente_opciones:v
                    {: RESULT = new Object[]{"options", v, 0}; :}
                ;
 
@@ -694,7 +805,8 @@ asignacion_variable ::= IDENTIFICADOR:nombre ASIGNACION expresion:v
 llamada_draw ::= IDENTIFICADOR:nombre PUNTO DRAW PAREN_ABRE args_draw:args PAREN_CIERRA
                {:
                    ArrayList argList = (args != null) ? args : new ArrayList();
-                   ParserPRO1.resultado.add(new Object[]{"draw", nombre, argList, nombreleft});
+                   Object[] drawNode = new Object[]{"draw", nombre, argList, nombreleft};
+                   RESULT = drawNode;
                :}
                ;
 
@@ -719,20 +831,20 @@ bloque_styles ::= STYLES CORCH_ABRE style_lista:s CORCH_CIERRA
 
 style_lista ::= style_lista:s COMA style_item:item
                 {:
-                    if (item.color.length()           > 0) s.color           = item.color;
-                    if (item.backgroundColor.length() > 0) s.backgroundColor = item.backgroundColor;
+                    if (item.color != null && !"".equals(item.color)) s.color = item.color;
+                    if (item.backgroundColor != null && !"".equals(item.backgroundColor.toString())) s.backgroundColor = item.backgroundColor;
                     if (item.fontFamily.length()       > 0) s.fontFamily      = item.fontFamily;
                     if (item.textSize   != null) s.textSize   = item.textSize;
                     if (item.borderSize != null) s.borderSize = item.borderSize;
                     if (item.borderType.length()       > 0) s.borderType      = item.borderType;
-                    if (item.borderColor.length()      > 0) s.borderColor     = item.borderColor;
+                    if (item.borderColor != null && !"".equals(item.borderColor.toString())) s.borderColor = item.borderColor;
                     RESULT = s;
                 :}
               | style_item:item
                 {: RESULT = item; :}
               ;
 
-style_item ::= CADENA:clave DOS_PUNTOS color:v
+style_item ::= CADENA:clave DOS_PUNTOS colorExpr:v
                {:
                    StyleNode s = new StyleNode();
                    if (clave.equals("color"))            s.color           = v;
@@ -740,6 +852,15 @@ style_item ::= CADENA:clave DOS_PUNTOS color:v
                    if (clave.equals("border color"))     s.borderColor     = v;
                    RESULT = s;
                :}
+             | CADENA:clave DOS_PUNTOS hsl_expr_nt:v
+               {:
+                   StyleNode s = new StyleNode();
+                   if (clave.equals("color"))            s.color           = v;
+                   if (clave.equals("background color")) s.backgroundColor = v;
+                   if (clave.equals("border color"))     s.borderColor     = v;
+                   RESULT = s;
+               :}
+
              | CADENA:clave DOS_PUNTOS familia_fuente:v
                {:
                    StyleNode s = new StyleNode();
@@ -752,12 +873,40 @@ style_item ::= CADENA:clave DOS_PUNTOS color:v
                    if (clave.equals("text size")) s.textSize = v;
                    RESULT = s;
                :}
-             | CADENA DOS_PUNTOS PAREN_ABRE expresion:size COMA tipo_borde:tipo COMA color:c PAREN_CIERRA
+             | CADENA DOS_PUNTOS PAREN_ABRE expresion:size COMA LINE COMA colorExpr:c PAREN_CIERRA
                {:
                    StyleNode s = new StyleNode();
-                   s.borderSize  = size;
-                   s.borderType  = tipo;
-                   s.borderColor = c;
+                   s.borderSize  = size; s.borderType = "LINE"; s.borderColor = c;
+                   RESULT = s;
+               :}
+             | CADENA DOS_PUNTOS PAREN_ABRE expresion:size COMA LINE COMA hsl_expr_nt:c PAREN_CIERRA
+               {:
+                   StyleNode s = new StyleNode();
+                   s.borderSize  = size; s.borderType = "LINE"; s.borderColor = c;
+                   RESULT = s;
+               :}
+             | CADENA DOS_PUNTOS PAREN_ABRE expresion:size COMA DOTTED COMA colorExpr:c PAREN_CIERRA
+               {:
+                   StyleNode s = new StyleNode();
+                   s.borderSize  = size; s.borderType = "DOTTED"; s.borderColor = c;
+                   RESULT = s;
+               :}
+             | CADENA DOS_PUNTOS PAREN_ABRE expresion:size COMA DOTTED COMA hsl_expr_nt:c PAREN_CIERRA
+               {:
+                   StyleNode s = new StyleNode();
+                   s.borderSize  = size; s.borderType = "DOTTED"; s.borderColor = c;
+                   RESULT = s;
+               :}
+             | CADENA DOS_PUNTOS PAREN_ABRE expresion:size COMA DOUBLE_BORDER COMA colorExpr:c PAREN_CIERRA
+               {:
+                   StyleNode s = new StyleNode();
+                   s.borderSize  = size; s.borderType = "DOUBLE"; s.borderColor = c;
+                   RESULT = s;
+               :}
+             | CADENA DOS_PUNTOS PAREN_ABRE expresion:size COMA DOUBLE_BORDER COMA hsl_expr_nt:c PAREN_CIERRA
+               {:
+                   StyleNode s = new StyleNode();
+                   s.borderSize  = size; s.borderType = "DOUBLE"; s.borderColor = c;
                    RESULT = s;
                :}
              ;
@@ -772,21 +921,25 @@ tipo_borde ::= LINE          {: RESULT = "LINE";   :}
              ;
 
 /* =================    LISTAS DE OPCIONES Y CORRECTOS  =================*/
+/* lista_opciones acepta CADENA y COMODIN como items */
 lista_opciones ::= LLAVE_ABRE lista_opciones_items:items LLAVE_CIERRA
                    {: RESULT = items; :}
                  | LLAVE_ABRE LLAVE_CIERRA
                    {: RESULT = new ArrayList(); :}
                  ;
 
-lista_opciones_items ::= lista_opciones_items:items COMA CADENA:v
-                         {: items.add(v); RESULT = items; :}
-                       | CADENA:v
+lista_opciones_items ::= lista_opciones_items:items COMA opcion_item:v
+                         {: if (v != null) items.add(v); RESULT = items; :}
+                       | opcion_item:v
                          {:
                              ArrayList items = new ArrayList();
-                             items.add(v);
+                             if (v != null) items.add(v);
                              RESULT = items;
                          :}
                        ;
+
+opcion_item ::= expresion:v  {: RESULT = v; :}
+              ;
 
 lista_correctos ::= LLAVE_ABRE lista_correctos_items:items LLAVE_CIERRA
                     {: RESULT = items; :}
@@ -806,7 +959,7 @@ lista_correctos_items ::= lista_correctos_items:items COMA expresion:v
 
 fuente_opciones ::= lista_opciones:v
                     {: RESULT = v; :}
-                  | WHO_IS_THAT_POKEMON PAREN_ABRE NUMBER_CONST COMA NUMERO:min COMA NUMERO:max PAREN_CIERRA
+                  | WHO_IS_THAT_POKEMON PAREN_ABRE NUMBER_CONST COMA expresion:min COMA expresion:max PAREN_CIERRA
                     {:
                         ArrayList lista = new ArrayList();
                         lista.add("__pokemon__");
@@ -821,7 +974,8 @@ elemento ::= seccion:n        {: RESULT = n; :}
            | tabla:n          {: RESULT = n; :}
            | elemento_texto:n {: RESULT = n; :}
            | pregunta:n       {: RESULT = n; :}
-           | llamada_draw
+           | llamada_draw:n
+             {: RESULT = n; :}
            | error            {: RESULT = null; :}
            ;
 
@@ -845,8 +999,8 @@ elemento_lista ::= elemento_lista:items COMA elemento:e
                  ;
 
 /* =================    SECCION  =================*/
-seccion ::= SECTION CORCH_ABRE attr_seccion_lista:node CORCH_CIERRA
-            {: RESULT = node; :}
+seccion ::= SECTION:tok CORCH_ABRE attr_seccion_lista:node CORCH_CIERRA
+            {: node.linea = tokleft; RESULT = node; :}
           | SECTION CORCH_ABRE error CORCH_CIERRA
             {: RESULT = new SectionNode(); :}
           ;
@@ -859,7 +1013,7 @@ attr_seccion_lista ::= attr_seccion_lista:node COMA attr_seccion:attr
                            if (clave.equals("height")) node.height = a[1];
                            if (clave.equals("pointX")) node.pointX = a[1];
                            if (clave.equals("pointY")) node.pointY = a[1];
-                           if (clave.equals("orientation")) node.orientation = (String) a[1];
+                           if (clave.equals("orientation")) node.orientation = a[1] != null ? a[1].toString() : "";
                            RESULT = node;
                        :}
                      | attr_seccion_lista:node COMA bloque_styles:s
@@ -880,7 +1034,7 @@ attr_seccion_lista ::= attr_seccion_lista:node COMA attr_seccion:attr
                            if (clave.equals("height")) node.height = a[1];
                            if (clave.equals("pointX")) node.pointX = a[1];
                            if (clave.equals("pointY")) node.pointY = a[1];
-                           if (clave.equals("orientation")) node.orientation = (String) a[1];
+                           if (clave.equals("orientation")) node.orientation = a[1] != null ? a[1].toString() : "";
                            RESULT = node;
                        :}
                      | bloque_styles:s
@@ -896,7 +1050,7 @@ attr_seccion_lista ::= attr_seccion_lista:node COMA attr_seccion:attr
                      ;
 
 attr_seccion ::= WITH        DOS_PUNTOS expresion:v
-                 {: RESULT = new Object[]{"with",        v}; :}
+                 {: RESULT = new Object[]{"width",       v}; :}
                | WIDTH       DOS_PUNTOS expresion:v
                  {: RESULT = new Object[]{"width",       v}; :}
                | HEIGHT      DOS_PUNTOS expresion:v
@@ -912,8 +1066,8 @@ attr_seccion ::= WITH        DOS_PUNTOS expresion:v
                ;
 
 /* =================    TABLA  =================*/
-tabla ::= TABLE CORCH_ABRE attr_tabla_lista:node CORCH_CIERRA
-          {: RESULT = node; :}
+tabla ::= TABLE:tok CORCH_ABRE attr_tabla_lista:node CORCH_CIERRA
+          {: node.linea = tokleft; RESULT = node; :}
         | TABLE CORCH_ABRE error CORCH_CIERRA
           {: RESULT = new TableNode(); :}
         ;
@@ -996,8 +1150,8 @@ tabla_celdas ::= tabla_celdas:lista COMA LLAVE_ABRE elemento:e LLAVE_CIERRA
                ;
 
 /* =================    TEXTO  =================*/
-elemento_texto ::= TEXT CORCH_ABRE attr_texto_lista:node CORCH_CIERRA
-                   {: RESULT = node; :}
+elemento_texto ::= TEXT:tok CORCH_ABRE attr_texto_lista:node CORCH_CIERRA
+                   {: node.linea = tokleft; RESULT = node; :}
                  | TEXT CORCH_ABRE error CORCH_CIERRA
                    {: RESULT = new TextNode(); :}
                  ;
@@ -1008,7 +1162,7 @@ attr_texto_lista ::= attr_texto_lista:node COMA attr_texto:attr
                          String clave = (String) a[0];
                          if (clave.equals("width")   && a[1] != null) node.width   = a[1];
                          if (clave.equals("height")  && a[1] != null) node.height  = a[1];
-                         if (clave.equals("content") && a[1] != null) node.content = a[1].toString();
+                         if (clave.equals("content") && a[1] != null) node.contentExpr = a[1];
                          RESULT = node;
                      :}
                    | attr_texto_lista:node COMA bloque_styles:s
@@ -1020,7 +1174,7 @@ attr_texto_lista ::= attr_texto_lista:node COMA attr_texto:attr
                          String clave = (String) a[0];
                          if (clave.equals("width")   && a[1] != null) node.width   = a[1];
                          if (clave.equals("height")  && a[1] != null) node.height  = a[1];
-                         if (clave.equals("content") && a[1] != null) node.content = a[1].toString();
+                         if (clave.equals("content") && a[1] != null) node.contentExpr = a[1];
                          RESULT = node;
                      :}
                    | bloque_styles:s
@@ -1062,7 +1216,7 @@ attr_pregunta_abierta_lista ::= attr_pregunta_abierta_lista:node COMA attr_pregu
                                 {:
                                     Object[] a = (Object[]) attr;
                                     String clave = (String) a[0];
-                                    if (clave.equals("label"))  node.label  = (String) a[1];
+                                    if (clave.equals("label"))  node.label  = (Object) a[1];
                                     if (clave.equals("width") && a[1] != null)  node.width  = a[1];
                                     if (clave.equals("height")) node.height = a[1];
                                     RESULT = node;
@@ -1074,7 +1228,7 @@ attr_pregunta_abierta_lista ::= attr_pregunta_abierta_lista:node COMA attr_pregu
                                     OpenQuestionNode node = new OpenQuestionNode();
                                     Object[] a = (Object[]) attr;
                                     String clave = (String) a[0];
-                                    if (clave.equals("label"))  node.label  = (String) a[1];
+                                    if (clave.equals("label"))  node.label  = (Object) a[1];
                                     if (clave.equals("width") && a[1] != null)  node.width  = a[1];
                                     if (clave.equals("height")) node.height = a[1];
                                     RESULT = node;
@@ -1104,7 +1258,7 @@ attr_pregunta_drop_lista ::= attr_pregunta_drop_lista:node COMA attr_pregunta_dr
                              {:
                                  Object[] a = (Object[]) attr;
                                  String clave = (String) a[0];
-                                 if (clave.equals("label"))   node.label   = (String) a[1];
+                                 if (clave.equals("label"))   node.label   = (Object) a[1];
                                  if (clave.equals("width") && a[1] != null)
                                      node.width  = a[1];
                                  if (clave.equals("height") && a[1] != null)
@@ -1121,7 +1275,7 @@ attr_pregunta_drop_lista ::= attr_pregunta_drop_lista:node COMA attr_pregunta_dr
                                  DropQuestionNode node = new DropQuestionNode();
                                  Object[] a = (Object[]) attr;
                                  String clave = (String) a[0];
-                                 if (clave.equals("label"))   node.label   = (String) a[1];
+                                 if (clave.equals("label"))   node.label   = (Object) a[1];
                                  if (clave.equals("width") && a[1] != null)
                                      node.width  = a[1];
                                  if (clave.equals("height") && a[1] != null)
@@ -1160,7 +1314,7 @@ attr_pregunta_select_lista ::= attr_pregunta_select_lista:node COMA attr_pregunt
                                    Object[] a = (Object[]) attr;
                                    String clave = (String) a[0];
                                    if (clave.equals("label") && a[1] != null)
-                                       node.label  = (String) a[1];
+                                       node.label  = (Object) a[1];
                                    if (clave.equals("width") && a[1] != null)
                                        node.width  = a[1];
                                    if (clave.equals("height") && a[1] != null)
@@ -1178,7 +1332,7 @@ attr_pregunta_select_lista ::= attr_pregunta_select_lista:node COMA attr_pregunt
                                    Object[] a = (Object[]) attr;
                                    String clave = (String) a[0];
                                    if (clave.equals("label") && a[1] != null)
-                                       node.label  = (String) a[1];
+                                       node.label  = (Object) a[1];
                                    if (clave.equals("width") && a[1] != null)
                                        node.width  = a[1];
                                    if (clave.equals("height") && a[1] != null)
@@ -1192,7 +1346,7 @@ attr_pregunta_select_lista ::= attr_pregunta_select_lista:node COMA attr_pregunt
                                {: SelectQuestionNode node = new SelectQuestionNode(); node.style = s; RESULT = node; :}
                              ;
 
-attr_pregunta_select ::= LABEL   DOS_PUNTOS CADENA:v
+attr_pregunta_select ::= LABEL   DOS_PUNTOS expresion:v
                          {: RESULT = new Object[]{"label",   v}; :}
                        | WIDTH   DOS_PUNTOS expresion:v
                          {: RESULT = new Object[]{"width",   v}; :}
@@ -1217,7 +1371,7 @@ attr_pregunta_multiple_lista ::= attr_pregunta_multiple_lista:node COMA attr_pre
                                      Object[] a = (Object[]) attr;
                                      String clave = (String) a[0];
                                      if (clave.equals("label") && a[1] != null)
-                                         node.label  = (String) a[1];
+                                         node.label  = (Object) a[1];
                                      if (clave.equals("width") && a[1] != null)
                                          node.width  = a[1];
                                      if (clave.equals("height") && a[1] != null)
@@ -1234,7 +1388,7 @@ attr_pregunta_multiple_lista ::= attr_pregunta_multiple_lista:node COMA attr_pre
                                      Object[] a = (Object[]) attr;
                                      String clave = (String) a[0];
                                      if (clave.equals("label") && a[1] != null)
-                                         node.label  = (String) a[1];
+                                         node.label  = (Object) a[1];
                                      if (clave.equals("width") && a[1] != null)
                                          node.width  = a[1];
                                      if (clave.equals("height") && a[1] != null)
@@ -1247,7 +1401,7 @@ attr_pregunta_multiple_lista ::= attr_pregunta_multiple_lista:node COMA attr_pre
   				{: MultipleQuestionNode node = new MultipleQuestionNode(); node.style = s; RESULT = node; :}
                                ;
 
-attr_pregunta_multiple ::= LABEL   DOS_PUNTOS CADENA:v
+attr_pregunta_multiple ::= LABEL   DOS_PUNTOS expresion:v
                            {: RESULT = new Object[]{"label",   v}; :}
                          | WIDTH   DOS_PUNTOS expresion:v
                            {: RESULT = new Object[]{"width",   v}; :}
@@ -1423,8 +1577,8 @@ sentencia_bloque ::= decl_number_interna:n
                      {: RESULT = n; :}
                    | bloque_codigo:n
                      {: RESULT = n; :}
-                   | llamada_draw
-                     {: RESULT = null; :}
+                   | llamada_draw:n
+                     {: RESULT = n; :}
                    | error
                      {: RESULT = null; :}
                    ;

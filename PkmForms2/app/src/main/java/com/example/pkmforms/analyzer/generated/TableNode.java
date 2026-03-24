@@ -9,4 +9,5 @@ public class TableNode {
     public Object    pointY = null;
     public StyleNode style  = null;
     public ArrayList<ArrayList<Object>> rows = new ArrayList<>();
+    public int       linea   = 0;
 }

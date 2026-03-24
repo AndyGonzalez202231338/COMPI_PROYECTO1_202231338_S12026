@@ -1,0 +1,151 @@
+###
+Author: Andy González
+Fecha: 23/03/2026
+Hora: 16:36
+Description: encuesta universidad
+Total de Secciones: 8
+Total de Preguntas: 12
+    Abiertas: 6
+    Desplegables: 0
+    Seleccion: 6
+    Multiples: 0
+###
+
+<table=360,200,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Carrera: Ingenieria en Sistemas">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=16>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Semestre: 3 | Creditos: 45">
+                    <style>
+                        <color=#1F4E79/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <text=0,0,"Nivel: Avanzado | Puntaje: 100">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=(30,130,80)/>
+                        <text size=18>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<section=360,340,0,0,VERTICAL>
+    <style>
+        <background color=(0,100,0)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con 1:",{"Excelente @[:star:]", "Bueno", "el area", "Deficiente @[:sad:]"},-1/>
+        <open=360,100,"Describe tu experiencia en el area @[:smile:]">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>    </content>
+</section>
+<section=360,340,0,0,VERTICAL>
+    <style>
+        <background color=(0,100,0)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con 2:",{"Excelente @[:star:]", "Bueno", "el area", "Deficiente @[:sad:]"},-1/>
+        <open=360,100,"Describe tu experiencia en el area @[:smile:]">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>    </content>
+</section>
+<section=360,340,0,0,VERTICAL>
+    <style>
+        <background color=(0,100,0)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con 1:",{"Excelente @[:star:]", "Bueno", "el area", "Deficiente @[:sad:]"},-1/>
+        <open=400,100,"Describe tu experiencia en el area @[:smile:]">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>    </content>
+</section>
+<section=360,340,0,0,VERTICAL>
+    <style>
+        <background color=(0,100,0)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con 2:",{"Excelente @[:star:]", "Bueno", "el area", "Deficiente @[:sad:]"},-1/>
+        <open=400,100,"Describe tu experiencia en el area @[:smile:]">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>    </content>
+</section>
+<section=360,340,0,0,VERTICAL>
+    <style>
+        <background color=(0,100,0)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con 1:",{"Excelente @[:star:]", "Bueno", "el area", "Deficiente @[:sad:]"},-1/>
+        <open=440,100,"Describe tu experiencia en el area @[:smile:]">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>    </content>
+</section>
+<section=360,340,0,0,VERTICAL>
+    <style>
+        <background color=(0,100,0)/>
+        <border,2,DOTTED,color=#2ECC71/>
+    </style>
+    <content>
+        <select=0,0,"Nivel de satisfaccion con 2:",{"Excelente @[:star:]", "Bueno", "el area", "Deficiente @[:sad:]"},-1/>
+        <open=440,100,"Describe tu experiencia en el area @[:smile:]">
+            <style>
+                <color=#4A90D9/>
+                <text size=14>
+            </style>
+        </open>    </content>
+</section>
+<section=360,80,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Ronda 1 | Total: 5 @[:star:]">
+            <style>
+                <color=#000000/>
+                <background color=#FFFF00/>
+                <text size=16>
+            </style>
+        </text>    </content>
+</section>
+<section=360,80,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Ronda 2 | Total: 15 @[:star:]">
+            <style>
+                <color=#000000/>
+                <background color=#FFFF00/>
+                <text size=16>
+            </style>
+        </text>    </content>
+</section>

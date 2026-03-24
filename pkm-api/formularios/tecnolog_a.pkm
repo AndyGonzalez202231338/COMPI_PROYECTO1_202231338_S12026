@@ -1,0 +1,244 @@
+###
+Author: Andy González
+Fecha: 23/03/2026
+Hora: 16:40
+Description: tecnologia
+Total de Secciones: 14
+Total de Preguntas: 27
+    Abiertas: 8
+    Desplegables: 3
+    Seleccion: 8
+    Multiples: 8
+###
+
+<table=360,320,0,0>
+    <content>
+        <line>
+            <element>
+                <section=360,150,0,0,HORIZONTAL>
+                    <style>
+                        <border,3,DOUBLE,color=#9B59B6/>
+                    </style>
+                    <content>
+                        <text=0,0,"Tecnologia | SENIOR">
+                            <style>
+                                <color=#9B59B6/>
+                                <text size=20>
+                            </style>
+                        </text>                        <text=0,0,"Total: 335 | Bonus: 98.75">
+                            <style>
+                                <color=#FFFFFF/>
+                                <background color=(80,30,120)/>
+                            </style>
+                        </text>                    </content>
+                </section>
+            </element>
+        </line>
+        <line>
+            <element>
+                <text=0,0,"Base: 80 | Nivel: 4">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=(255,60,40)/>
+                        <text size=16>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,2,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 1 (nivel 1):">
+            <style>
+                <color=(78,101,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 1 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 1", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{0, 0, 2}>
+            <style>
+                <background color=(120,90,199)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,2,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 1 (nivel 2):">
+            <style>
+                <color=(78,102,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 2 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 1", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{0, 1, 2}>
+            <style>
+                <background color=(120,100,199)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,3,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 2 (nivel 1):">
+            <style>
+                <color=(76,101,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 1 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 2", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{1, 0, 2}>
+            <style>
+                <background color=(140,90,198)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,3,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 2 (nivel 2):">
+            <style>
+                <color=(76,102,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 2 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 2", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{1, 1, 2}>
+            <style>
+                <background color=(140,100,198)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,4,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 3 (nivel 1):">
+            <style>
+                <color=(74,101,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 1 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 3", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{2, 0, 2}>
+            <style>
+                <background color=(160,90,197)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,4,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 3 (nivel 2):">
+            <style>
+                <color=(74,102,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 2 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 3", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{2, 1, 2}>
+            <style>
+                <background color=(160,100,197)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,5,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 4 (nivel 1):">
+            <style>
+                <color=(72,101,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 1 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 4", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{3, 0, 2}>
+            <style>
+                <background color=(180,90,196)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,580,0,0,VERTICAL>
+    <style>
+        <background color=(0,0,120)/>
+        <border,5,DOTTED,color=#8E44AD/>
+    </style>
+    <content>
+        <open=0,0,"Describe tu experiencia en Competencia 4 (nivel 2):">
+            <style>
+                <color=(72,102,200)/>
+            </style>
+        </open>        <select=0,0,"Categoria de competencia: 2 @[:star:]",{"Tecnica", "Liderazgo", "Tipo 4", "Comunicacion Analitica"},-1/>
+        <multiple=0,0,"Logros destacados @[:heart:]",{"Certificacion", "Premio", "Proyecto", "Publicacion", "Innovacion"},{3, 1, 2}>
+            <style>
+                <background color=(180,100,196)/>
+            </style>
+        </multiple>    </content>
+</section>
+<section=360,500,0,0,VERTICAL>
+    <style>
+        <color=#FFFFFF/>
+        <background color=(0,80,200)/>
+    </style>
+    <content>
+        <drop=0,100,"Tecnologia en 1 nivel 2",{"Bulbasaur", "Ivysaur", "Venusaur"},-1>
+            <style>
+                <color=#9B59B6/>
+                <background color=(30,161,1)/>
+            </style>
+        </drop>    </content>
+</section>
+<section=360,500,0,0,VERTICAL>
+    <style>
+        <color=#FFFFFF/>
+        <background color=(0,80,200)/>
+    </style>
+    <content>
+        <drop=0,100,"Tecnologia en 2 nivel 4",{"Ivysaur", "Venusaur", "Charmander", "Charmeleon", "Charizard"},-1>
+            <style>
+                <color=#9B59B6/>
+                <background color=(60,162,2)/>
+            </style>
+        </drop>    </content>
+</section>
+<section=360,500,0,0,VERTICAL>
+    <style>
+        <color=#FFFFFF/>
+        <background color=(0,80,200)/>
+    </style>
+    <content>
+        <drop=0,100,"Tecnologia en 3 nivel 6",{"Venusaur", "Charmander", "Charmeleon", "Charizard", "Squirtle", "Wartortle", "Blastoise"},-1>
+            <style>
+                <color=#9B59B6/>
+                <background color=(90,163,3)/>
+            </style>
+        </drop>    </content>
+</section>
+<section=360,70,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Cierre 2 | Acum: 488 | Estado: SENIOR">
+            <style>
+                <color=#FFFFFF/>
+                <background color=#2C3E50/>
+                <text size=15>
+            </style>
+        </text>    </content>
+</section>
+<section=360,70,0,0,HORIZONTAL>
+    <content>
+        <text=0,0,"Cierre 3 | Acum: 500 | Estado: SENIOR">
+            <style>
+                <color=#FFFFFF/>
+                <background color=#2C3E50/>
+                <text size=15>
+            </style>
+        </text>    </content>
+</section>

@@ -67,6 +67,7 @@ class PkmParser {
                     "op||" -> if ((a ?: 0.0) >= 1.0 || (b ?: 0.0) >= 1.0) 1.0 else 0.0
                     "op&&" -> if ((a ?: 0.0) >= 1.0 && (b ?: 0.0) >= 1.0) 1.0 else 0.0
                     "op!"  -> if ((a ?: 0.0) >= 1.0) 0.0 else 1.0
+                    "group" -> a  // parentesis: desenvuelve el valor
                     else   -> null
                 }
             }
@@ -76,25 +77,48 @@ class PkmParser {
 
     private fun evaluarCondicion(v: Any?): Boolean = (evaluarExpr(v) ?: 0.0) >= 1.0
 
-    // Detecta si una expresion mezcla || y && al mismo nivel
+    /* Detecta si una expresion mezcla || y && al mismo nivel logico.
+    * Los parentesis agrupan sub-expresiones y NO cuentan como mezcla:
+    *   (a && b) || c  -> valido, el && esta dentro de un grupo
+    *   a && b || c    -> invalido, mezcla al mismo nivel
+    * El CUP hace los parentesis transparentes (RESULT = v), por lo que
+    * necesitamos rastrear si el operador contrario aparece como hijo
+    * DIRECTO de la cadena del mismo operador, no dentro de otro operador.
+    */
     private fun tieneMezclaLogica(v: Any?): Boolean {
         if (v !is Array<*>) return false
         val op = v[0] as? String ?: return false
         if (op != "op||" && op != "op&&") return false
-        return buscarOperadorContrario(v, op)
+        return hayContrarioEnCadena(v, op)
     }
 
-    private fun buscarOperadorContrario(v: Any?, opPadre: String): Boolean {
+    /* Recorre la cadena de nodos con el mismo operador (ej: a && b && c)
+    * y verifica si alguno de los operandos directos es el operador contrario.
+    * Si un operando es otro tipo de operador (comparacion, aritmetico, negacion)
+    * se detiene y NO entra, porque eso seria una sub-expresion independiente.
+     */
+    private fun hayContrarioEnCadena(v: Any?, opCadena: String): Boolean {
         if (v !is Array<*>) return false
         val op = v[0] as? String ?: return false
-        val contrario = if (opPadre == "op||") "op&&" else "op||"
-        if (op == contrario) return true
-        // Solo buscar en hijos si tienen el mismo operador padre (mismo nivel)
-        if (op == opPadre) {
-            return buscarOperadorContrario(v.getOrNull(1), opPadre) ||
-                    buscarOperadorContrario(v.getOrNull(2), opPadre)
+        val contrario = if (opCadena == "op||") "op&&" else "op||"
+
+        return when (op) {
+            "group" -> false  // parentesis: es una barrera, no entrar
+            opCadena -> {
+                // Mismo operador: seguir recorriendo la cadena
+                val izq = v.getOrNull(1)
+                val der = v.getOrNull(2)
+                // Si alguno de los hijos directos ES el contrario Y no esta
+                // protegido por parentesis, hay mezcla
+                val izqEsContrario = (izq is Array<*> && izq.getOrNull(0) == contrario)
+                val derEsContrario = (der is Array<*> && der.getOrNull(0) == contrario)
+                if (izqEsContrario || derEsContrario) true
+                else hayContrarioEnCadena(izq, opCadena) || hayContrarioEnCadena(der, opCadena)
+            }
+            // Cualquier otro operador (comparacion, aritmetico, negacion)
+            // representa una sub-expresion: no entrar
+            else -> false
         }
-        return false
     }
 
     private fun validarMezclaLogica(v: Any?, linea: Int, allErrors: MutableList<ErrorToken>) {
@@ -111,9 +135,70 @@ class PkmParser {
 
     private fun resolverNum(v: Any?): Double? = evaluarExpr(v)
 
+    // Convierte un valor a indice entero para 'correct'.
+    // Retorna null si el valor es un decimal con parte fraccionaria distinta de cero (error semantico).
+    // Si termina en .0 se acepta y trunca (ej: 1.0 -> 1).
+    private fun resolverCorrect(v: Any?): Pair<Int?, Boolean> {
+        val d = resolverNum(v) ?: return Pair(null, false)
+        return if (d % 1.0 != 0.0) {
+            Pair(null, true) // true = es error decimal
+        } else {
+            Pair(d.toInt(), false)
+        }
+    }
+
     private fun resolverStr(v: Any?): String? = when (v) {
-        is String -> simbolos[v] as? String ?: v
-        else      -> v?.toString()
+        is String -> {
+            if (v == "__COMODIN__") "__COMODIN__"  // marcador: se reemplaza en convertirSpecial
+            else {
+                val enSimbolos = simbolos[v]
+                when (enSimbolos) {
+                    is String -> enSimbolos
+                    is Double -> if (enSimbolos % 1.0 == 0.0) enSimbolos.toInt().toString() else enSimbolos.toString()
+                    is Number -> enSimbolos.toString()
+                    null      -> v  // es un string literal como "Hola"
+                    else      -> enSimbolos.toString()
+                }
+            }
+        }
+        is Array<*> -> {
+            val op = v.getOrNull(0) as? String
+            if (op == "group") {
+                // parentesis: desenvuelve y resuelve el contenido
+                resolverStr(v.getOrNull(1))
+            } else {
+                val num = evaluarExpr(v)
+                if (num != null) {
+                    if (num % 1.0 == 0.0) num.toInt().toString() else num.toString()
+                } else {
+                    if (op == "op+") {
+                        val izq = resolverStr(v.getOrNull(1))
+                        val der = resolverStr(v.getOrNull(2))
+                        if (izq != null && der != null) izq + der else null
+                    } else null
+                }
+            }
+        }
+        else -> v?.toString()
+    }
+
+    // Valida que width, height, pointX, pointY no sean negativos.
+    // Retorna true si el valor es invalido (negativo).
+    private fun esNegativo(v: Any?): Boolean {
+        val d = resolverNum(v) ?: return false
+        return d < 0
+    }
+
+    private fun validarDimension(v: Any?, nombre: String, etiqueta: String, linea: Int) {
+        if (v != null && esNegativo(v)) {
+            erroresLogica.add(ErrorToken(
+                lexeme      = etiqueta,
+                line        = linea,
+                column      = 0,
+                type        = ErrorType.SEMANTICO,
+                description = "$etiqueta: el valor de '$nombre' no puede ser negativo."
+            ))
+        }
     }
 
     suspend fun parse(code: String): ParseResult {
@@ -127,7 +212,7 @@ class PkmParser {
         erroresLogica.clear()
 
         return try {
-            val reader = java.io.StringReader(code)
+            val reader = java.io.StringReader(PkmLexer.normalizarColoresAngulares(code))
             val lexer  = LexerPRO1(reader)
             val parser = ParserPRO1(lexer)
             parser.parse()
@@ -301,12 +386,15 @@ class PkmParser {
                             allErrors.add(ErrorToken(lexeme = nombre, line = linea, column = 0,
                                 type = ErrorType.SEMANTICO,
                                 description = "Variable special '$nombre' no ha sido declarada."))
-                        } else if (args.size != special.comodines) {
-                            allErrors.add(ErrorToken(lexeme = nombre, line = linea, column = 0,
-                                type = ErrorType.SEMANTICO,
-                                description = "draw() de '$nombre' recibio ${args.size} argumento(s) pero la variable tiene ${special.comodines} comodin(es)."))
                         } else {
-                            convertirSpecial(special, args.mapNotNull { resolverNum(it) })?.let { elementos.add(it) }
+                            val totalComodines = totalComodinesSpecial(special)
+                            if (args.size != totalComodines) {
+                                allErrors.add(ErrorToken(lexeme = nombre, line = linea, column = 0,
+                                    type = ErrorType.SEMANTICO,
+                                    description = "draw() de '$nombre' recibio ${args.size} argumento(s) pero la variable tiene $totalComodines comodin(es)."))
+                            } else {
+                                convertirSpecial(special, args.map { resolverArg(it) })?.let { elementos.add(it) }
+                            }
                         }
                     }
                     node is Array<*>  -> { }
@@ -338,26 +426,84 @@ class PkmParser {
      * De lo contrario, filtra los strings normales.
      */
     private suspend fun resolverOpciones(rawOptions: java.util.ArrayList<*>): List<String> {
+        return resolverOpcionesConArgs(rawOptions, emptyList(), 0).first
+    }
+
+    private suspend fun resolverOpcionesConArgs(
+        rawOptions: java.util.ArrayList<*>,
+        args: List<Any?>,
+        startIdx: Int
+    ): Pair<List<String>, Int> {
         if (rawOptions.firstOrNull() == "__pokemon__") {
-            val min = (rawOptions.getOrNull(1) as? Double)?.toInt() ?: 1
-            val max = (rawOptions.getOrNull(2) as? Double)?.toInt() ?: 10
-            return PokemonApi.obtenerPokemones(min, max)
+            var idx = startIdx
+            val minRaw = rawOptions.getOrNull(1)
+            val maxRaw = rawOptions.getOrNull(2)
+            val min = if (minRaw == "__COMODIN__") { val v = (args.getOrNull(idx) as? Double)?.toInt() ?: 1; idx++; v }
+            else (minRaw as? Double)?.toInt() ?: 1
+            val max = if (maxRaw == "__COMODIN__") { val v = (args.getOrNull(idx) as? Double)?.toInt() ?: 10; idx++; v }
+            else (maxRaw as? Double)?.toInt() ?: 10
+            return Pair(PokemonApi.obtenerPokemones(min, max), idx)
         }
-        return rawOptions.filterIsInstance<String>()
+        // Iterar opciones resolviendo cada item (puede ser String, COMODIN, expresion)
+        var idx = startIdx
+        val opciones = mutableListOf<String>()
+        for (item in rawOptions) {
+            val comodinesEnItem = contarComodines(item)
+            if (comodinesEnItem > 0) {
+                val (valor, nuevoIdx) = resolverExprConArgs(item, args, idx)
+                opciones.add(valor ?: "")
+                idx = nuevoIdx
+            } else {
+                val str = resolverStr(item) ?: resolverNum(item)?.let {
+                    if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
+                } ?: item?.toString() ?: ""
+                if (str.isNotEmpty()) opciones.add(str)
+            }
+        }
+        return Pair(opciones, idx)
+    }
+
+    private suspend fun convertirNodoODraw(obj: Any?): FormElement? {
+        if (obj is Array<*> && obj.size >= 3 && obj[0] == "draw") {
+            val nombre  = obj[1] as? String ?: return null
+            val args    = obj[2] as? java.util.ArrayList<*> ?: java.util.ArrayList<Any>()
+            val special = speciales[nombre] ?: return null
+            val totalComodines = totalComodinesSpecial(special)
+            // Si el conteo no coincide, intentar de todas formas con los args disponibles
+            // para no silenciar el elemento por diferencias de conteo
+            if (args.size < totalComodines) {
+                erroresLogica.add(ErrorToken(lexeme = nombre, line = 0, column = 0,
+                    type = ErrorType.SEMANTICO,
+                    description = "draw() de '$nombre' recibio ${args.size} argumento(s) pero la variable tiene $totalComodines comodin(es)."))
+                return null
+            }
+            return convertirSpecial(special, args.map { resolverArg(it) })
+        }
+        return convertirNodo(obj)
     }
 
     private suspend fun convertirNodo(obj: Any?): FormElement? {
         return when (obj) {
             is OpenQuestionNode -> FormElement.OpenQuestion(
-                label = resolverStr(obj.label) ?: obj.label,
+                label = resolverStr(obj.label) ?: obj.label?.toString() ?: "",
                 width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
                 style = convertirEstilo(obj.style))
             is DropQuestionNode -> {
                 val rawOpts  = obj.options
                 val esPokemon = rawOpts.firstOrNull() == "__pokemon__"
                 val opciones = resolverOpciones(rawOpts)
-                val correct  = resolverNum(obj.correctVal)?.toInt() ?: -1
-                if (obj.correctVal != null && opciones.isNotEmpty() && (correct < 0 || correct >= opciones.size)) {
+                val (correctVal, esDecimalInvalido) = if (obj.correctVal != null) resolverCorrect(obj.correctVal) else Pair(-1, false)
+                val correct = correctVal ?: -1
+                if (obj.correctVal != null && esDecimalInvalido) {
+                    advertenciasSelect.add(ErrorToken(
+                        lexeme      = "DROP_QUESTION",
+                        line        = obj.linea,
+                        column      = 0,
+                        type        = ErrorType.SEMANTICO,
+                        description = "DROP_QUESTION: el valor de correct debe ser un entero. Use un numero sin decimales (ej: 1 en lugar de 1.5)."
+                    ))
+                }
+                if (obj.correctVal != null && !esDecimalInvalido && opciones.isNotEmpty() && (correct < 0 || correct >= opciones.size)) {
                     advertenciasSelect.add(ErrorToken(
                         lexeme      = "DROP_QUESTION",
                         line        = obj.linea,
@@ -367,7 +513,7 @@ class PkmParser {
                     ))
                 }
                 FormElement.DropQuestion(
-                    label   = resolverStr(obj.label) ?: obj.label,
+                    label   = resolverStr(obj.label) ?: obj.label?.toString() ?: "",
                     options = opciones,
                     correct = correct,
                     width   = resolverNum(obj.width)?.toInt(),
@@ -376,7 +522,8 @@ class PkmParser {
             }
             is SelectQuestionNode -> {
                 val opciones = obj.options.filterIsInstance<String>()
-                val correct  = resolverNum(obj.correctVal)?.toInt() ?: -1
+                val (correctVal, esDecimalInvalido) = if (obj.correctVal != null) resolverCorrect(obj.correctVal) else Pair(-1, false)
+                val correct = correctVal ?: -1
                 if (opciones.size > 5) {
                     advertenciasSelect.add(ErrorToken(
                         lexeme      = "SELECT_QUESTION",
@@ -386,7 +533,16 @@ class PkmParser {
                         description = "SELECT_QUESTION tiene ${opciones.size} opciones (mas de 5). Se agregara al formulario de todas formas."
                     ))
                 }
-                if (obj.correctVal != null && opciones.isNotEmpty() && (correct < 0 || correct >= opciones.size)) {
+                if (obj.correctVal != null && esDecimalInvalido) {
+                    advertenciasSelect.add(ErrorToken(
+                        lexeme      = "SELECT_QUESTION",
+                        line        = obj.linea,
+                        column      = 0,
+                        type        = ErrorType.SEMANTICO,
+                        description = "SELECT_QUESTION: el valor de correct debe ser un entero. Use un numero sin decimales (ej: 1 en lugar de 1.5)."
+                    ))
+                }
+                if (obj.correctVal != null && !esDecimalInvalido && opciones.isNotEmpty() && (correct < 0 || correct >= opciones.size)) {
                     advertenciasSelect.add(ErrorToken(
                         lexeme      = "SELECT_QUESTION",
                         line        = obj.linea,
@@ -396,52 +552,100 @@ class PkmParser {
                     ))
                 }
                 FormElement.SelectQuestion(
-                    label   = resolverStr(obj.label) ?: obj.label,
+                    label   = resolverStr(obj.label) ?: obj.label?.toString() ?: "",
                     options = opciones,
                     correct = correct,
                     width   = resolverNum(obj.width)?.toInt(),
                     height  = resolverNum(obj.height)?.toInt(),
                     style   = convertirEstilo(obj.style))
             }
-            is MultipleQuestionNode -> FormElement.MultipleQuestion(
-                label   = resolverStr(obj.label) ?: obj.label,
-                options = obj.options.filterIsInstance<String>(),
-                correct = obj.correct.mapNotNull { resolverNum(it)?.toInt() },
-                width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
-                style = convertirEstilo(obj.style))
-            is SectionNode -> FormElement.Section(
-                orientation = obj.orientation,
-                width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
-                pointX = resolverNum(obj.pointX)?.toInt(), pointY = resolverNum(obj.pointY)?.toInt(),
-                elements = obj.elements.mapNotNull { convertirNodo(it) },
-                style = convertirEstilo(obj.style))
-            is TableNode -> FormElement.Table(
-                rows = obj.rows.map { row ->
-                    row.mapNotNull { cell -> convertirNodo(cell) }
-                },
-                width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
-                pointX = resolverNum(obj.pointX)?.toInt(), pointY = resolverNum(obj.pointY)?.toInt(),
-                style = convertirEstilo(obj.style))
-            is TextNode -> FormElement.TextElement(
-                content = obj.content,
-                width = resolverNum(obj.width)?.toInt(), height = resolverNum(obj.height)?.toInt(),
-                style = convertirEstilo(obj.style))
+            is MultipleQuestionNode -> {
+                val opciones = obj.options.filterIsInstance<String>()
+                val correctList = mutableListOf<Int>()
+                for (item in obj.correct) {
+                    val (cv, esDecimal) = resolverCorrect(item)
+                    if (esDecimal) {
+                        advertenciasSelect.add(ErrorToken(
+                            lexeme      = "MULTIPLE_QUESTION",
+                            line        = obj.linea,
+                            column      = 0,
+                            type        = ErrorType.SEMANTICO,
+                            description = "MULTIPLE_QUESTION: el valor de correct debe ser un entero. Use un numero sin decimales."
+                        ))
+                    } else if (cv != null) {
+                        if (opciones.isNotEmpty() && (cv < 0 || cv >= opciones.size)) {
+                            advertenciasSelect.add(ErrorToken(
+                                lexeme      = "MULTIPLE_QUESTION",
+                                line        = obj.linea,
+                                column      = 0,
+                                type        = ErrorType.SEMANTICO,
+                                description = "MULTIPLE_QUESTION: correct=$cv esta fuera del rango de opciones (0..${opciones.size - 1})."
+                            ))
+                        } else {
+                            correctList.add(cv)
+                        }
+                    }
+                }
+                FormElement.MultipleQuestion(
+                    label   = resolverStr(obj.label) ?: obj.label?.toString() ?: "",
+                    options = opciones,
+                    correct = correctList,
+                    width   = resolverNum(obj.width)?.toInt(),
+                    height  = resolverNum(obj.height)?.toInt(),
+                    style   = convertirEstilo(obj.style))
+            }
+            is SectionNode -> {
+                validarDimension(obj.width,  "width",  "SECTION", obj.linea)
+                validarDimension(obj.height, "height", "SECTION", obj.linea)
+                validarDimension(obj.pointX, "pointX", "SECTION", obj.linea)
+                validarDimension(obj.pointY, "pointY", "SECTION", obj.linea)
+                FormElement.Section(
+                    orientation = obj.orientation,
+                    width  = resolverNum(obj.width)?.toInt(),
+                    height = resolverNum(obj.height)?.toInt(),
+                    pointX = resolverNum(obj.pointX)?.toInt(),
+                    pointY = resolverNum(obj.pointY)?.toInt(),
+                    elements = obj.elements.mapNotNull { convertirNodoODraw(it) },
+                    style = convertirEstilo(obj.style))
+            }
+            is TableNode -> {
+                validarDimension(obj.width,  "width",  "TABLE", obj.linea)
+                validarDimension(obj.height, "height", "TABLE", obj.linea)
+                validarDimension(obj.pointX, "pointX", "TABLE", obj.linea)
+                validarDimension(obj.pointY, "pointY", "TABLE", obj.linea)
+                FormElement.Table(
+                    rows = obj.rows.map { row -> row.mapNotNull { cell -> convertirNodoODraw(cell) } },
+                    width  = resolverNum(obj.width)?.toInt(),
+                    height = resolverNum(obj.height)?.toInt(),
+                    pointX = resolverNum(obj.pointX)?.toInt(),
+                    pointY = resolverNum(obj.pointY)?.toInt(),
+                    style  = convertirEstilo(obj.style))
+            }
+            is TextNode -> {
+                validarDimension(obj.width,  "width",  "TEXT", obj.linea)
+                validarDimension(obj.height, "height", "TEXT", obj.linea)
+                FormElement.TextElement(
+                    content = resolverStr(obj.contentExpr) ?: obj.content,
+                    width   = resolverNum(obj.width)?.toInt(),
+                    height  = resolverNum(obj.height)?.toInt(),
+                    style   = convertirEstilo(obj.style))
+            }
             else -> null
         }
     }
 
-    private fun resolverComodin(v: Any?, args: List<Double>, idx: Int): Double? {
+    private fun resolverComodin(v: Any?, args: List<Any?>, idx: Int): Double? {
         return when {
-            v == "?" -> args.getOrNull(idx)
+            v == "__COMODIN__" -> (args.getOrNull(idx) as? Double) ?: resolverNum(args.getOrNull(idx))
             v is Array<*> && v.size == 2 -> {
                 val op = v[0] as? String ?: return null
                 val base = resolverNum(v[1]) ?: return null
-                val arg  = args.getOrNull(idx) ?: return null
+                val arg  = (args.getOrNull(idx) as? Double) ?: resolverNum(args.getOrNull(idx)) ?: return null
                 when (op) {
-                    "expr+?" -> base + arg; "expr-?" -> base - arg
-                    "expr*?" -> base * arg; "expr/?" -> if (arg != 0.0) base / arg else null
-                    "?+expr" -> arg + base; "?-expr" -> arg - base
-                    "?*expr" -> arg * base; "?/expr" -> if (base != 0.0) arg / base else null
+                    "__expr+?__" -> base + arg; "__expr-?__" -> base - arg
+                    "__expr*?__" -> base * arg; "__expr/?__" -> if (arg != 0.0) base / arg else null
+                    "__?+expr__" -> arg + base; "__?-expr__" -> arg - base
+                    "__?*expr__" -> arg * base; "__?/expr__" -> if (base != 0.0) arg / base else null
                     else -> null
                 }
             }
@@ -450,22 +654,228 @@ class PkmParser {
     }
 
     private fun contarComodines(v: Any?): Int = when {
-        v == "?" -> 1
-        v is Array<*> && v.size == 2 && (v[0] as? String)?.contains("?") == true -> 1
+        v == "__COMODIN__" -> 1
+        v is Array<*> -> {
+            val op = v.getOrNull(0) as? String ?: ""
+            // Los operadores con comodin embebido como __expr+?__ ya tienen el ? implícito
+            if (op.startsWith("__") && op.contains("?") && op.endsWith("__")) 1
+            else v.drop(1).sumOf { contarComodines(it) }
+        }
         else -> 0
     }
 
-    private fun convertirSpecial(node: SpecialNode, args: List<Double>): FormElement? {
+    private fun totalComodinesSpecial(special: com.example.pkmforms.analyzer.generated.SpecialNode): Int {
+        return special.comodines +
+                contarComodinesEstilo(special.style) +
+                contarComodinesOpciones(special.options)
+    }
+
+    // Convierte Object[] de Java a List para poder procesarlo en Kotlin
+    private fun javaArrayToList(v: Any?): List<Any?>? {
+        if (v == null) return null
+        if (!v.javaClass.isArray) return null
+        val len = java.lang.reflect.Array.getLength(v)
+        return (0 until len).map { java.lang.reflect.Array.get(v, it) }
+    }
+
+    private fun contarComodinesObj(v: Any?): Int {
+        if (v == null) return 0
+        if (v == "__COMODIN__") return 1
+        if (v is String) return v.count { it == '?' }
+        // Array de Kotlin
+        if (v is Array<*>) {
+            val op = v.getOrNull(0) as? String ?: ""
+            if (op.startsWith("__") && op.contains("?") && op.endsWith("__")) return 1
+            return v.drop(1).sumOf { contarComodinesObj(it) }
+        }
+        // Object[] de Java — usar reflexion
+        if (v.javaClass.isArray) {
+            val lista = javaArrayToList(v) ?: return 0
+            val op = lista.getOrNull(0) as? String ?: ""
+            if (op.startsWith("__") && op.contains("?") && op.endsWith("__")) return 1
+            return lista.drop(1).sumOf { contarComodinesObj(it) }
+        }
+        return 0
+    }
+
+    private fun contarComodinesEstilo(s: StyleNode?): Int {
+        if (s == null) return 0
+        return contarComodinesColor(s.color) +
+                contarComodinesColor(s.backgroundColor) +
+                contarComodinesColor(s.borderColor) +
+                contarComodinesObj(s.textSize) +
+                contarComodinesObj(s.borderSize)
+    }
+
+
+    private fun contarComodinesOpciones(rawOptions: java.util.ArrayList<*>): Int {
+        if (rawOptions.firstOrNull() == "__pokemon__") {
+            var count = 0
+            if (rawOptions.getOrNull(1) == "__COMODIN__") count++
+            if (rawOptions.getOrNull(2) == "__COMODIN__") count++
+            return count
+        }
+        // Contar comodines en listas normales de opciones
+        return rawOptions.sumOf { contarComodines(it) }
+    }
+
+    private fun resolverArg(v: Any?): Any? {
+        val num = resolverNum(v)
+        if (num != null) return num
+        return resolverStr(v)
+    }
+
+    // Resuelve una expresion que puede contener comodines usando args
+    private fun resolverExprConArgs(v: Any?, args: List<Any?>, startIdx: Int): Pair<String?, Int> {
+        var idx = startIdx
+        fun resolverNum2(expr: Any?): Double? {
+            return when {
+                expr == "__COMODIN__" -> {
+                    val d = (args.getOrNull(idx) as? Double) ?: resolverNum(args.getOrNull(idx))
+                    idx++
+                    d
+                }
+                expr is Array<*> -> {
+                    val op = expr.getOrNull(0) as? String ?: return null
+                    when {
+                        op.startsWith("__") && op.contains("?") -> {
+                            val base = resolverNum(expr.getOrNull(1)) ?: 0.0
+                            val arg = (args.getOrNull(idx) as? Double) ?: resolverNum(args.getOrNull(idx)) ?: 0.0
+                            idx++
+                            when (op) {
+                                "__expr+?__" -> base + arg; "__expr-?__" -> base - arg
+                                "__expr*?__" -> base * arg; "__expr/?__" -> if (arg != 0.0) base / arg else null
+                                "__?+expr__" -> arg + base; "__?-expr__" -> arg - base
+                                "__?*expr__" -> arg * base; "__?/expr__" -> if (base != 0.0) arg / base else null
+                                else -> null
+                            }
+                        }
+                        op == "op+" -> { val a = resolverNum2(expr.getOrNull(1)); val b = resolverNum2(expr.getOrNull(2)); if (a != null && b != null) a + b else null }
+                        op == "op-" -> { val a = resolverNum2(expr.getOrNull(1)); val b = resolverNum2(expr.getOrNull(2)); if (a != null && b != null) a - b else null }
+                        op == "op*" -> { val a = resolverNum2(expr.getOrNull(1)); val b = resolverNum2(expr.getOrNull(2)); if (a != null && b != null) a * b else null }
+                        op == "op/" -> { val a = resolverNum2(expr.getOrNull(1)); val b = resolverNum2(expr.getOrNull(2)); if (a != null && b != null && b != 0.0) a / b else null }
+                        op == "op^" -> { val a = resolverNum2(expr.getOrNull(1)); val b = resolverNum2(expr.getOrNull(2)); if (a != null && b != null) Math.pow(a, b) else null }
+                        op == "group" -> resolverNum2(expr.getOrNull(1))
+                        else -> resolverNum(expr)
+                    }
+                }
+                else -> resolverNum(expr)
+            }
+        }
+        fun resolver(expr: Any?): String? {
+            return when {
+                expr == "__COMODIN__" -> {
+                    val r = formatearArg(args.getOrNull(idx)); idx++; r
+                }
+                expr is String -> resolverStr(expr)
+                expr is Array<*> -> {
+                    val op = expr.getOrNull(0) as? String ?: return null
+                    when (op) {
+                        "op+" -> {
+                            val left = expr.getOrNull(1)
+                            val right = expr.getOrNull(2)
+                            // Si alguno de los operandos es string, concatenar directamente
+                            // sin intentar resolver como numero (evita consumir idx prematuramente)
+                            val leftIsString = left is String && left != "__COMODIN__"
+                            val rightIsString = right is String && right != "__COMODIN__"
+                            if (leftIsString || rightIsString) {
+                                val izq = resolver(left)
+                                val der = resolver(right)
+                                if (izq != null && der != null) izq + der else izq ?: der
+                            } else {
+                                // Guardar idx antes de intentar como numero
+                                val savedIdx = idx
+                                val numVal = resolverNum2(expr)
+                                if (numVal != null) formatearArg(numVal)
+                                else {
+                                    // Restaurar idx y hacer concatenacion string
+                                    idx = savedIdx
+                                    val izq = resolver(left)
+                                    val der = resolver(right)
+                                    if (izq != null && der != null) izq + der else izq ?: der
+                                }
+                            }
+                        }
+                        "group" -> resolver(expr.getOrNull(1))
+                        else -> {
+                            val numVal = resolverNum2(expr)
+                            if (numVal != null) formatearArg(numVal)
+                            else resolverStr(expr)
+                        }
+                    }
+                }
+                expr is Number -> formatearArg(expr.toDouble())
+                else -> expr?.toString()
+            }
+        }
+        val resultado = resolver(v)
+        return Pair(resultado, idx)
+    }
+
+    // Formatea un argumento de draw para mostrar en label u opcion
+    private fun formatearArg(rawArg: Any?): String = when {
+        rawArg is Double && rawArg % 1.0 == 0.0 -> rawArg.toInt().toString()
+        rawArg is Double -> rawArg.toString()
+        rawArg is String -> rawArg
+        rawArg != null -> {
+            val d = resolverNum(rawArg)
+            if (d != null && d % 1.0 == 0.0) d.toInt().toString()
+            else rawArg.toString()
+        }
+        else -> ""
+    }
+
+    private suspend fun convertirSpecial(node: SpecialNode, args: List<Any?>): FormElement? {
         var idx = 0
-        val resolvedWidth   = if (contarComodines(node.width)   > 0) resolverComodin(node.width,   args, idx++)?.toInt() else resolverNum(node.width)?.toInt()
-        val resolvedHeight  = if (contarComodines(node.height)  > 0) resolverComodin(node.height,  args, idx++)?.toInt() else resolverNum(node.height)?.toInt()
-        val resolvedCorrect = if (contarComodines(node.correct) > 0) resolverComodin(node.correct, args, idx++)?.toInt() else resolverNum(node.correct)?.toInt() ?: -1
-        val options = node.options.filterIsInstance<String>()
+        // El orden de consumo de args sigue el orden de declaracion en el special:
+        // width -> height -> opciones -> correct -> label -> estilo
+        val widthComodines = contarComodines(node.width)
+        val resolvedWidth = if (widthComodines > 0) {
+            val v = resolverComodin(node.width, args, idx)?.toInt()
+            idx += widthComodines
+            v
+        } else resolverNum(node.width)?.toInt()
+
+        val heightComodines = contarComodines(node.height)
+        val resolvedHeight = if (heightComodines > 0) {
+            val v = resolverComodin(node.height, args, idx)?.toInt()
+            idx += heightComodines
+            v
+        } else resolverNum(node.height)?.toInt()
+
+        val (resolvedOpciones, idxDespuesOpciones) = resolverOpcionesConArgs(node.options, args, idx)
+        idx = idxDespuesOpciones
+
+        val correctComodines = contarComodines(node.correct)
+        val resolvedCorrect = if (correctComodines > 0) {
+            val v = resolverComodin(node.correct, args, idx)?.toInt()
+            idx += correctComodines
+            v ?: -1
+        } else resolverNum(node.correct)?.toInt() ?: -1
+
+        val resolvedCorrectList: List<Int> = if (node.correct is java.util.ArrayList<*>) {
+            (node.correct as java.util.ArrayList<*>).mapNotNull { item ->
+                if (item == "__COMODIN__") {
+                    val v = resolverComodin("__COMODIN__", args, idx)?.toInt()
+                    idx++
+                    v
+                } else resolverNum(item)?.toInt()
+            }
+        } else emptyList()
+
+        val labelComodines = contarComodines(node.label)
+        val resolvedLabel = if (labelComodines > 0) {
+            val (labelStr, newIdx) = resolverExprConArgs(node.label, args, idx)
+            idx = newIdx
+            labelStr ?: node.label?.toString() ?: ""
+        } else resolverStr(node.label) ?: node.label?.toString() ?: ""
+
+        val (resolvedStyle, _) = convertirEstiloConComodines(node.style, args, idx)
         return when (node.tipo) {
-            "OPEN"     -> FormElement.OpenQuestion(label = node.label, width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
-            "DROP"     -> FormElement.DropQuestion(label = node.label, options = options, correct = resolvedCorrect ?: -1, width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
-            "SELECT"   -> FormElement.SelectQuestion(label = node.label, options = options, correct = resolvedCorrect ?: -1, width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
-            "MULTIPLE" -> FormElement.MultipleQuestion(label = node.label, options = options, correct = emptyList(), width = resolvedWidth, height = resolvedHeight, style = convertirEstilo(node.style))
+            "OPEN"     -> FormElement.OpenQuestion(label = resolvedLabel, width = resolvedWidth, height = resolvedHeight, style = resolvedStyle)
+            "DROP"     -> FormElement.DropQuestion(label = resolvedLabel, options = resolvedOpciones, correct = resolvedCorrect ?: -1, width = resolvedWidth, height = resolvedHeight, style = resolvedStyle)
+            "SELECT"   -> FormElement.SelectQuestion(label = resolvedLabel, options = resolvedOpciones, correct = resolvedCorrect ?: -1, width = resolvedWidth, height = resolvedHeight, style = resolvedStyle)
+            "MULTIPLE" -> FormElement.MultipleQuestion(label = resolvedLabel, options = resolvedOpciones, correct = resolvedCorrectList, width = resolvedWidth, height = resolvedHeight, style = resolvedStyle)
             else -> null
         }
     }
@@ -475,6 +885,30 @@ class PkmParser {
         val resultado = mutableListOf<FormElement>()
         for (sentencia in cuerpo) {
             when {
+                sentencia is Array<*> && sentencia.size >= 3 && sentencia[0] == "draw" -> {
+                    val nombre = sentencia[1] as? String ?: continue
+                    val args   = sentencia[2] as? java.util.ArrayList<*> ?: java.util.ArrayList<Any>()
+                    val linea  = (sentencia.getOrNull(3) as? Int) ?: 0
+                    val special = speciales[nombre]
+                    if (special == null) {
+                        erroresLogica.add(ErrorToken(lexeme = nombre, line = linea, column = 0,
+                            type = ErrorType.SEMANTICO,
+                            description = "Variable special '$nombre' no ha sido declarada."))
+                    } else {
+                        val totalComodines = totalComodinesSpecial(special)
+                        if (args.size != totalComodines) {
+                            erroresLogica.add(ErrorToken(lexeme = nombre, line = linea, column = 0,
+                                type = ErrorType.SEMANTICO,
+                                description = "draw() de '$nombre' recibio ${args.size} argumento(s) pero la variable tiene $totalComodines comodin(es)."))
+                        } else {
+                            convertirSpecial(special, args.map { resolverArg(it) })?.let { resultado.add(it) }
+                        }
+                    }
+                }
+                sentencia is IfNode      -> resultado.addAll(interpretarIf(sentencia))
+                sentencia is WhileNode   -> resultado.addAll(interpretarWhile(sentencia))
+                sentencia is DoWhileNode -> resultado.addAll(interpretarDoWhile(sentencia))
+                sentencia is ForNode     -> resultado.addAll(interpretarFor(sentencia))
                 sentencia is Array<*> && sentencia.size == 4 -> {
                     val nombre = sentencia[0] as? String ?: continue
                     val valor  = sentencia[1]
@@ -496,11 +930,7 @@ class PkmParser {
                         }
                     }
                 }
-                sentencia is IfNode      -> resultado.addAll(interpretarIf(sentencia))
-                sentencia is WhileNode   -> resultado.addAll(interpretarWhile(sentencia))
-                sentencia is DoWhileNode -> resultado.addAll(interpretarDoWhile(sentencia))
-                sentencia is ForNode     -> resultado.addAll(interpretarFor(sentencia))
-                sentencia != null        -> convertirNodo(sentencia)?.let { resultado.add(it) }
+                sentencia != null        -> convertirNodoODraw(sentencia)?.let { resultado.add(it) }
             }
         }
         return resultado
@@ -590,14 +1020,160 @@ class PkmParser {
         return resultado
     }
 
+    private fun resolverColor(v: Any?, args: List<Any?> = emptyList(), startIdx: Int = 0): String {
+        return resolverColorConArgs(v, args, startIdx).first
+    }
+
+    // Evalua un canal de color serializado como "50", "?", "50+?", "?*5", "colorBase+(?*5)" etc
+    private fun evaluarCanalColor(canal: String, args: List<Any?>, idx: Int): Pair<Int, Int> {
+        var i = idx
+        if (canal == "?") {
+            val d = (args.getOrNull(i) as? Double) ?: resolverNum(args.getOrNull(i)) ?: 0.0
+            i++
+            return Pair(d.toInt().coerceIn(0, 255), i)
+        }
+        if (!canal.contains("?")) {
+            // Sin comodin: intentar como numero o como expresion con variables
+            val num = canal.toDoubleOrNull() ?: run {
+                // Puede ser una variable como "colorBase"
+                val v = simbolos[canal]
+                if (v is Double) v else null
+            }
+            return Pair(num?.toInt()?.coerceIn(0, 255) ?: 0, i)
+        }
+        // Canal con expresion: "50+?", "?*5", "colorBase+(?*5)"
+        // Reemplazar ? con el valor del arg
+        val arg = (args.getOrNull(i) as? Double) ?: resolverNum(args.getOrNull(i)) ?: 0.0
+        i++
+        // Sustituir ? por el valor numerico y evaluar
+        val expr = canal.replace("?", arg.toInt().toString())
+        // Evaluacion simple de expresiones aritmeticas basicas
+        val resultado = evaluarExprString(expr)
+        return Pair(resultado?.toInt()?.coerceIn(0, 255) ?: 0, i)
+    }
+
+    // Evalua una expresion aritmetica simple como string "50+10", "200-5", "10*3"
+    private fun evaluarExprString(expr: String): Double? {
+        return try {
+            // Intentar como numero directo primero
+            expr.toDoubleOrNull() ?: run {
+                // Buscar operadores de izquierda a derecha
+                val e = expr.trim()
+                // Suma
+                val plusIdx = e.lastIndexOf('+')
+                if (plusIdx > 0) {
+                    val left = evaluarExprString(e.substring(0, plusIdx))
+                    val right = evaluarExprString(e.substring(plusIdx + 1))
+                    if (left != null && right != null) return@run left + right
+                }
+                // Resta (no al inicio que seria negativo)
+                val minusIdx = e.lastIndexOf('-')
+                if (minusIdx > 0) {
+                    val left = evaluarExprString(e.substring(0, minusIdx))
+                    val right = evaluarExprString(e.substring(minusIdx + 1))
+                    if (left != null && right != null) return@run left - right
+                }
+                // Multiplicacion
+                val multIdx = e.lastIndexOf('*')
+                if (multIdx > 0) {
+                    val left = evaluarExprString(e.substring(0, multIdx))
+                    val right = evaluarExprString(e.substring(multIdx + 1))
+                    if (left != null && right != null) return@run left * right
+                }
+                // Variable
+                val varVal = simbolos[e]
+                if (varVal is Double) varVal else null
+            }
+        } catch (ex: Exception) { null }
+    }
+
+    private fun resolverColorConArgs(v: Any?, args: List<Any?>, startIdx: Int): Pair<String, Int> {
+        var idx = startIdx
+        if (v !is String) return Pair("", idx)
+
+        if (v.startsWith("rgb_expr:")) {
+            val partes = v.removePrefix("rgb_expr:").split(":")
+            val canales = partes.map { canal ->
+                val (valor, newIdx) = evaluarCanalColor(canal, args, idx)
+                idx = newIdx
+                valor
+            }
+            val r = canales.getOrElse(0) { 0 }
+            val g = canales.getOrElse(1) { 0 }
+            val b = canales.getOrElse(2) { 0 }
+            return Pair("($r,$g,$b)", idx)
+        }
+
+        if (v.startsWith("hsl_expr:")) {
+            val partes = v.removePrefix("hsl_expr:").split(":")
+            val canales = partes.map { canal ->
+                val (valor, newIdx) = evaluarCanalColor(canal, args, idx)
+                idx = newIdx
+                valor
+            }
+            val h = canales.getOrElse(0) { 0 }
+            val s = canales.getOrElse(1) { 0 }
+            val l = canales.getOrElse(2) { 0 }
+            return Pair("<$h,$s,$l>", idx)
+        }
+
+        if (v.contains("?")) {
+            return resolverColorComodin(v, args, idx)
+        }
+
+        return Pair(v, idx)
+    }
+
     private fun convertirEstilo(s: StyleNode?): StyleData {
         if (s == null) return StyleData()
         return StyleData(
-            color = s.color, backgroundColor = s.backgroundColor,
+            color = resolverColor(s.color), backgroundColor = resolverColor(s.backgroundColor),
             fontFamily = s.fontFamily,
             textSize   = resolverNum(s.textSize)?.toFloat()   ?: 0f,
             borderSize = resolverNum(s.borderSize)?.toFloat() ?: 0f,
-            borderType = s.borderType, borderColor = s.borderColor
+            borderType = s.borderType, borderColor = resolverColor(s.borderColor)
         )
+    }
+
+    // Resuelve los comodines ? en un color string usando los argumentos del draw
+    // Ejemplo: "(?,100,255)" con args=[200] -> "(200,100,255)"
+    private fun resolverColorComodin(color: String, args: List<Any?>, idx: Int): Pair<String, Int> {
+        var i = idx
+        val resultado = color.replace(Regex("[?]")) {
+            val d = args.getOrNull(i) as? Double ?: resolverNum(args.getOrNull(i))
+            val valor = d?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: args.getOrNull(i)?.toString() ?: "0"
+            i++
+            valor
+        }
+        return Pair(resultado, i)
+    }
+
+    // Cuenta cuantos ? hay en un color
+    private fun contarComodinesColor(color: Any?): Int {
+        if (color !is String) return 0
+        return color.count { it == '?' }
+    }
+
+    private fun convertirEstiloConComodines(s: StyleNode?, args: List<Any?>, startIdx: Int): Pair<StyleData, Int> {
+        if (s == null) return Pair(StyleData(), startIdx)
+        var idx = startIdx
+        val (resolvedColor, idx2) = if (contarComodinesColor(s.color) > 0)
+            resolverColorConArgs(s.color, args, idx) else Pair(resolverColor(s.color), idx)
+        idx = idx2
+        val (resolvedBg, idx3) = if (contarComodinesColor(s.backgroundColor) > 0)
+            resolverColorConArgs(s.backgroundColor, args, idx) else Pair(resolverColor(s.backgroundColor), idx)
+        idx = idx3
+        val (resolvedBorderColor, idx4) = if (contarComodinesColor(s.borderColor) > 0)
+            resolverColorConArgs(s.borderColor, args, idx) else Pair(resolverColor(s.borderColor), idx)
+        idx = idx4
+        return Pair(StyleData(
+            color = resolvedColor,
+            backgroundColor = resolvedBg,
+            fontFamily = s.fontFamily,
+            textSize   = resolverNum(s.textSize)?.toFloat()   ?: 0f,
+            borderSize = resolverNum(s.borderSize)?.toFloat() ?: 0f,
+            borderType = s.borderType,
+            borderColor = resolvedBorderColor
+        ), idx)
     }
 }

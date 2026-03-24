@@ -1,0 +1,357 @@
+###
+Author: Andy Fuentes
+Fecha: 23/03/2026
+Hora: 21:28
+Description: tablas y sus múltiples usos
+Total de Secciones: 0
+Total de Preguntas: 7
+    Abiertas: 1
+    Desplegables: 0
+    Seleccion: 5
+    Multiples: 1
+###
+
+<table=360,120,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"USAC — CUNOC">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=18>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Ciclo 2026">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2E75B6/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <text=0,0,"Carrera: Ingenieria en Sistemas">
+                    <style>
+                        <color=#1F4E79/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Semestre: 5">
+                    <style>
+                        <color=#1F4E79/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<table=360,160,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Creditos">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2C3E50/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Estado">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2C3E50/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Puntaje">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2C3E50/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <text=0,0,"120">
+                    <style>
+                        <color=#2C3E50/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Avanzado">
+                    <style>
+                        <color=#2C3E50/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"170">
+                    <style>
+                        <color=#2C3E50/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <text=0,0,"Resultado final del perfil academico del estudiante registrado.">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=(44,62,80)/>
+                        <text size=12>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<select=360,160,"Como calificarias la carga academica de tu semestre actual?",{"Muy alta", "Alta", "Adecuada", "Baja"},2>
+    <style>
+        <color=#2C3E50/>
+        <text size=14>
+    </style>
+</select>
+<open=360,110,"Describe los principales retos que enfrentaste este semestre @[:serious:]">
+    <style>
+        <color=#2C3E50/>
+        <background color=(245,245,245)/>
+        <text size=14>
+    </style>
+</open>
+<multiple=360,200,"Que recursos academicos utilizaste con mayor frecuencia?",{"Biblioteca", "Tutores", "Plataforma virtual", "Material del docente"},{0, 2, 3}>
+    <style>
+        <color=#FFFFFF/>
+        <background color=(44,62,80)/>
+        <text size=14>
+    </style>
+</multiple>
+<table=360,130,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Curso 1">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Creditos del curso">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2E75B6/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <select=170,100,"Nota obtenida en Curso 1:",{"Excelente", "Bueno", "Regular", "Reprobado"},0>
+                    <style>
+                        <color=#2C3E50/>
+                        <text size=12>
+                    </style>
+                </select>
+            </element>
+            <element>
+                <text=0,0,"Creditos: 4">
+                    <style>
+                        <color=#2ECC71/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<table=360,130,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Curso 2">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Creditos del curso">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2E75B6/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <select=170,100,"Nota obtenida en Curso 2:",{"Excelente", "Bueno", "Regular", "Reprobado"},0>
+                    <style>
+                        <color=#2C3E50/>
+                        <text size=12>
+                    </style>
+                </select>
+            </element>
+            <element>
+                <text=0,0,"Creditos: 8">
+                    <style>
+                        <color=#2ECC71/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<table=360,130,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Curso 3">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Creditos del curso">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2E75B6/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <select=170,100,"Nota obtenida en Curso 3:",{"Excelente", "Bueno", "Regular", "Reprobado"},0>
+                    <style>
+                        <color=#2C3E50/>
+                        <text size=12>
+                    </style>
+                </select>
+            </element>
+            <element>
+                <text=0,0,"Creditos: 12">
+                    <style>
+                        <color=#2ECC71/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<table=360,130,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Curso 4">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Creditos del curso">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#2E75B6/>
+                        <text size=13>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <select=170,100,"Nota obtenida en Curso 4:",{"Excelente", "Bueno", "Regular", "Reprobado"},0>
+                    <style>
+                        <color=#2C3E50/>
+                        <text size=12>
+                    </style>
+                </select>
+            </element>
+            <element>
+                <text=0,0,"Creditos: 16">
+                    <style>
+                        <color=#2ECC71/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
+<table=360,100,0,0>
+    <content>
+        <line>
+            <element>
+                <text=0,0,"Estado final">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"Puntaje acumulado">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=#1F4E79/>
+                        <text size=14>
+                    </style>
+                </text>
+            </element>
+        </line>
+        <line>
+            <element>
+                <text=0,0,"Avanzado">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=(39,174,96)/>
+                        <text size=16>
+                    </style>
+                </text>
+            </element>
+            <element>
+                <text=0,0,"170">
+                    <style>
+                        <color=#FFFFFF/>
+                        <background color=(41,128,185)/>
+                        <text size=16>
+                    </style>
+                </text>
+            </element>
+        </line>
+    </content>
+</table>
